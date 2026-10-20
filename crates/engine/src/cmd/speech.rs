@@ -36,7 +36,7 @@ pub fn specs() -> Vec<CommandSpec> {
     ]
 }
 
-const SETTINGS_PARAMS: &str = r#"{"engine"?: "system|local|cloud" (local: Piper or another program that writes a WAV file; cloud: an OpenAI-compatible /v1/audio/speech service, which gets the text being read), "chunk"?: "paragraph|page|document" (read and render one paragraph, one page or all of it at a time), "local"?: {"program"?: string, "args"?: [string] ({voice} {output} {rate} {lengthScale} are filled in), "voice"?: string (Piper: the .onnx model)}, "cloud"?: {"endpoint"?: "https://…", "model"?: string, "voice"?: string, "apiKeyEnv"?: string (the environment variable with the API key; the key is never saved)}, "text"?: {"urls"?: "read|domain|skip", "skipEmoji"?: bool, "skipSymbols"?: bool, "skipMarkup"?: bool, "skipBrackets"?: bool, "skipParentheses"?: bool, "collapseRepeats"?: bool, "skipChars"?: string, "replacements"?: [{"from": string, "to": string}], "skipPatterns"?: [regex]}, "voices"?: {"enabled"?: bool, "marker"?: one character (default §; "§A Hello." is read by Voice A), "scope"?: "paragraph|untilNext", "narrator"?: {"system"?, "local"?, "cloud"?: voice, "rate"?: 0.5…2}, "roles"?: [{"label": string, "system"?, "local"?, "cloud"?: voice, "rate"?: 0.5…2}]}} — changes the named settings (a bad value changes nothing) and returns them all; a reading in progress carries on from the same sentence."#;
+const SETTINGS_PARAMS: &str = r#"{"engine"?: "system|local|cloud" (local: Piper or another program that writes a WAV file; cloud: an OpenAI-compatible /v1/audio/speech service, which gets the text being read), "chunk"?: "paragraph|page|document" (read and render one paragraph, one page or all of it at a time), "local"?: {"program"?: string, "args"?: [string] ({voice} {output} {rate} {lengthScale} are filled in), "voice"?: string (Piper: the .onnx model)}, "cloud"?: {"endpoint"?: "https://…", "model"?: string, "voice"?: string, "apiKeyEnv"?: string (the environment variable with the API key; the key is never saved)}, "text"?: {"urls"?: "read|domain|skip", "skipEmoji"?: bool, "skipSymbols"?: bool, "skipMarkup"?: bool, "skipBrackets"?: bool, "skipParentheses"?: bool, "collapseRepeats"?: bool, "skipChars"?: string, "replacements"?: [{"from": string, "to": string}], "skipPatterns"?: [regex]}, "voices"?: {"enabled"?: bool, "marker"?: one character (default §; "§A Hello." is read by Voice A), "scope"?: "paragraph|untilNext", "narrator"?: {"system"?, "local"?, "cloud"?: voice, "rate"?: 0.5…2}, "roles"?: [{"label": string, "system"?, "local"?, "cloud"?: voice, "rate"?: 0.5…2}]}} — changes the named settings (a bad value changes nothing) and returns them all; a reading in progress carries on from the same sentence. `local.program`, `local.args`, `cloud.endpoint` and `cloud.apiKeyEnv` can't be changed, nor the cloud voice switched on: only the user can, in File › Options › Accessibility."#;
 
 /// Start reading from the caret (or the selection); while reading, pause or carry on.
 fn read_aloud(s: &mut Session, v: &Value) -> CmdResult {
@@ -363,13 +363,18 @@ mod tests {
         s.run("review.readAloud", &json!({})).unwrap();
         s.run("readAloud.next", &json!({})).unwrap();
         s.run("readAloud.playPause", &json!({})).unwrap();
-        let r = s.run("readAloud.settings", &json!({"engine": "cloud", "text": {"skipEmoji": true}})).unwrap();
-        assert_eq!((r["engine"].as_str(), r["text"]["skipEmoji"].as_bool()), (Some("cloud"), Some(true)));
+        let r = s.run("readAloud.settings", &json!({"engine": "local", "text": {"skipEmoji": true}})).unwrap();
+        assert_eq!((r["engine"].as_str(), r["text"]["skipEmoji"].as_bool()), (Some("local"), Some(true)));
         let st = s.run("readAloud.status", &json!({})).unwrap();
-        assert_eq!((st["current"]["text"].as_str(), st["state"].as_str(), st["engine"].as_str()), (Some("Two."), Some("paused"), Some("cloud")));
+        assert_eq!((st["current"]["text"].as_str(), st["state"].as_str(), st["engine"].as_str()), (Some("Two."), Some("paused"), Some("local")));
         // A bad value changes nothing.
-        assert!(s.run("readAloud.settings", &json!({"engine": "local", "voices": {"marker": "xy"}})).is_err());
-        assert_eq!(s.read_aloud.settings().engine, crate::speech::Engine::Cloud);
+        assert!(s.run("readAloud.settings", &json!({"engine": "system", "voices": {"marker": "xy"}})).is_err());
+        assert_eq!(s.read_aloud.settings().engine, crate::speech::Engine::Local);
+        // A command can't choose the program WordCraft runs, nor where text and the key go.
+        for bad in [json!({"local": {"program": "/bin/sh"}}), json!({"cloud": {"endpoint": "https://example.com/x"}}), json!({"engine": "cloud"})] {
+            assert!(s.run("readAloud.settings", &bad).is_err(), "{bad}");
+        }
+        assert_eq!(s.read_aloud.settings().local.program, "piper");
     }
 
     #[test]

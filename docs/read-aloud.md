@@ -179,6 +179,12 @@ wordcraft-cli run --template sample \
   --cmd review.readAloud
 ```
 
+For safety, `readAloud.settings` cannot change `local.program`, `local.args`, `cloud.endpoint` or
+`cloud.apiKeyEnv`, and it cannot switch the cloud voice on. These settings choose the program that
+WordCraft runs and where the text and the API key go. Change them in **File › Options ›
+Accessibility**. The command accepts the same values that it returned, so an agent can send the
+settings back.
+
 `readAloud.voices` returns the voices in the lists: `system`, `local`, `cloud` and
 `cloudModels`, each a list of `{"id", "label"}`. With `{"refresh": true}`, it asks the speech
 program again.

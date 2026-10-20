@@ -465,6 +465,18 @@ fn speech(app: &mut WordApp, params: Value) {
     }
 }
 
+/// Change Read Aloud settings that only the user may change: the program WordCraft runs, where
+/// the cloud voice sends text and the API key, and switching the cloud voice on. Commands can't
+/// ([`wordcraft_engine::speech::settings::Origin`]), so the pane changes them directly.
+fn speech_user(app: &mut WordApp, params: Value) {
+    use wordcraft_engine::speech::settings::Origin;
+    let mut next = app.session.read_aloud.settings().clone();
+    match next.apply_from(&params, Origin::User) {
+        Ok(()) => app.session.read_aloud.set_settings(next),
+        Err(e) => app.status(e.to_string()),
+    }
+}
+
 /// A text field for a Read Aloud setting: what is typed is applied when the field loses focus
 /// (or Enter is pressed), so a half-typed value (a pattern, an address) isn't tried on every key.
 /// Returns the text to apply.
@@ -561,7 +573,7 @@ fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
         ),
     ] {
         if ui.radio(s.engine == engine, tl!(label)).on_hover_text(tl!(tip)).clicked() && s.engine != engine {
-            speech(app, json!({"engine": engine.name()}));
+            speech_user(app, json!({"engine": engine.name()}));
         }
     }
     match s.engine {
@@ -569,7 +581,7 @@ fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
             egui::Grid::new("read_aloud_local").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
                 ui.label(tl!("Program:"));
                 if let Some(t) = speech_field(ui, "local.program", &s.local.program, false, 320.0) {
-                    speech(app, json!({"local": {"program": t}}));
+                    speech_user(app, json!({"local": {"program": t}}));
                 }
                 ui.end_row();
                 ui.label(tl!("Voice model:"));
@@ -583,7 +595,7 @@ fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
                 ui.label(tl!("Arguments (one per line):"));
                 if let Some(t) = speech_field(ui, "local.args", &s.local.args.join("\n"), true, 320.0) {
                     let args: Vec<&str> = t.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
-                    speech(app, json!({"local": {"args": args}}));
+                    speech_user(app, json!({"local": {"args": args}}));
                 }
                 ui.end_row();
             });
@@ -612,7 +624,7 @@ fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
                         None => speech_field(ui, &format!("cloud.{key}"), value, false, 320.0),
                     };
                     if let Some(t) = picked {
-                        speech(app, json!({"cloud": { key: t }}));
+                        speech_user(app, json!({"cloud": { key: t }}));
                     }
                     ui.end_row();
                 }

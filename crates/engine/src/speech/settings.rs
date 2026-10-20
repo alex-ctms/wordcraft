@@ -337,10 +337,28 @@ fn rate(v: &Value, key: &str) -> Result<Option<f32>, CmdError> {
     }
 }
 
+/// Who changes the settings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Origin {
+    /// The user, in File › Options, or the settings saved in `ui.json`.
+    User,
+    /// A command (`readAloud.settings` from the control channel, MCP, the CLI or a script). A
+    /// command may not choose the program WordCraft runs (`local.program`, `local.args`), where
+    /// text and the API key go (`cloud.endpoint`, `cloud.apiKeyEnv`), or switch the cloud voice
+    /// on: any client that can send commands could otherwise run any program, or send the
+    /// document and the key to its own server.
+    Command,
+}
+
 impl SpeechSettings {
-    /// Change the settings `v` names; anything else stays. A bad value is an error, and then
-    /// nothing changes.
+    /// Change the settings `v` names, as a command ([`Origin::Command`]); anything else stays. A
+    /// bad value is an error, and then nothing changes.
     pub fn apply(&mut self, v: &Value) -> Result<(), CmdError> {
+        self.apply_from(v, Origin::Command)
+    }
+
+    /// [`SpeechSettings::apply`] for `origin`.
+    pub fn apply_from(&mut self, v: &Value, origin: Origin) -> Result<(), CmdError> {
         if !v.is_object() {
             return Err(bad("the settings must be an object"));
         }
@@ -400,6 +418,20 @@ impl SpeechSettings {
         if let Some(x) = object(v, "voices")? {
             s.voices = voices(&Value::Object(x.clone()), s.voices)?;
         }
+        if origin == Origin::Command {
+            // The same values are fine: an agent may send back the settings it read.
+            if s.local.program != self.local.program || s.local.args != self.local.args {
+                return Err(bad("`local.program` and `local.args` choose the program WordCraft runs: change them in File › Options › Accessibility"));
+            }
+            if s.cloud.endpoint != self.cloud.endpoint || s.cloud.api_key_env != self.cloud.api_key_env {
+                return Err(bad(
+                    "`cloud.endpoint` and `cloud.apiKeyEnv` choose where the text and the API key go: change them in File › Options › Accessibility",
+                ));
+            }
+            if s.engine == Engine::Cloud && self.engine != Engine::Cloud {
+                return Err(bad("the cloud voice sends the document's text to a service: switch it on in File › Options › Accessibility"));
+            }
+        }
         *self = s;
         Ok(())
     }
@@ -412,7 +444,7 @@ impl SpeechSettings {
             for (k, x) in m {
                 let mut one = Map::new();
                 one.insert(k.clone(), x.clone());
-                if s.apply(&Value::Object(one)).is_err() {
+                if s.apply_from(&Value::Object(one), Origin::User).is_err() {
                     log::warn!("Read Aloud setting `{k}` ignored");
                 }
             }
@@ -612,7 +644,7 @@ mod tests {
     #[test]
     fn apply_changes_only_what_is_named() {
         let mut s = SpeechSettings::default();
-        s.apply(&json!({"engine": "cloud", "chunk": "page", "cloud": {"voice": "nova"}})).unwrap();
+        s.apply_from(&json!({"engine": "cloud", "chunk": "page", "cloud": {"voice": "nova"}}), Origin::User).unwrap();
         assert_eq!((s.engine, s.chunk, s.cloud.voice.as_str()), (Engine::Cloud, Chunk::Page, "nova"));
         assert_eq!(s.cloud.model, "tts-1");
         s.apply(&json!({"voices": {"marker": "^", "scope": "untilNext", "roles": [{"label": "Anna", "cloud": "shimmer", "rate": 9}]}})).unwrap();
@@ -653,6 +685,36 @@ mod tests {
             assert!(s.apply(&bad).is_err(), "{bad}");
             assert_eq!(s, SpeechSettings::default(), "{bad}");
         }
+    }
+
+    #[test]
+    fn commands_cannot_choose_the_program_or_where_text_goes() {
+        let mut s = SpeechSettings::default();
+        for bad in [
+            json!({"local": {"program": "/bin/sh"}}),
+            json!({"local": {"args": ["-c", "rm -rf ~"]}}),
+            json!({"cloud": {"endpoint": "https://attacker.example/v1/audio/speech"}}),
+            json!({"cloud": {"apiKeyEnv": "AWS_SECRET_ACCESS_KEY"}}),
+            json!({"engine": "cloud"}),
+        ] {
+            assert!(s.apply(&bad).is_err(), "{bad}");
+            assert_eq!(s, SpeechSettings::default(), "{bad}");
+        }
+        // The settings as read back, unchanged, are fine, and so is everything else.
+        s.apply(&SpeechSettings::default().to_json()).unwrap();
+        s.apply(&json!({"engine": "local", "local": {"voice": "/voices/a.onnx"}, "cloud": {"voice": "nova", "model": "tts-1-hd"}})).unwrap();
+        // The user may change them (File › Options, `ui.json`).
+        s.apply_from(
+            &json!({"engine": "cloud", "local": {"program": "/opt/piper/piper"}, "cloud": {"endpoint": "http://localhost:8000/v1/audio/speech"}}),
+            Origin::User,
+        )
+        .unwrap();
+        assert_eq!((s.engine, s.local.program.as_str()), (Engine::Cloud, "/opt/piper/piper"));
+        assert_eq!(SpeechSettings::load(&s.to_json()), s);
+        // Once the user has switched the cloud voice on, a command may leave it on, or switch it off.
+        s.apply(&json!({"engine": "cloud", "chunk": "page"})).unwrap();
+        s.apply(&json!({"engine": "system"})).unwrap();
+        assert!(s.apply(&json!({"engine": "cloud"})).is_err());
     }
 
     #[test]
