@@ -28,6 +28,9 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(r#"{"value"?: bool}"#)
             .pure(),
         CommandSpec::new("readAloud.settings", "Read Aloud Settings", "Review › Speech", settings).params(SETTINGS_PARAMS).pure(),
+        CommandSpec::new("readAloud.voices", "Read Aloud Voices", "Review › Speech", voices)
+            .params(r#"{"refresh"?: bool (ask the speech program again)} — the voices to pick from: {"system": [{"id", "label"}] (the system speech program's), "local": [...] (Piper .onnx models in the folders of the models in use and the usual download folders), "cloud": [...] and "cloudModels": [...] (an OpenAI-compatible service's)}; the settings also take any other name or path"#)
+            .pure(),
         CommandSpec::new("readAloud.status", "Read Aloud Status", "Review › Speech", status).pure(),
         CommandSpec::new("caret.pastCitation", "Move Past Citation", "Zotero › Citations", past_citation).pure(),
     ]
@@ -131,6 +134,22 @@ fn skip_citations(s: &mut Session, v: &Value) -> CmdResult {
         restart(s);
     }
     status(s, v)
+}
+
+/// The voices each engine can use, for the settings' lists.
+fn voices(s: &mut Session, v: &Value) -> CmdResult {
+    use crate::speech::neural::{self, CLOUD_MODELS, CLOUD_VOICES, VoiceChoice};
+    let set = s.read_aloud.settings();
+    let mut known: Vec<&str> = vec![set.local.voice.as_str()];
+    known.extend(set.voices.roles.iter().map(|r| r.local.as_str()));
+    let list = |v: Vec<VoiceChoice>| v.iter().map(VoiceChoice::to_json).collect::<Vec<_>>();
+    let named = |names: &[&str]| names.iter().map(|n| serde_json::json!({"id": n, "label": n})).collect::<Vec<_>>();
+    Ok(serde_json::json!({
+        "system": list(neural::system_voices(p::bool(v, "refresh").unwrap_or(false))),
+        "local": list(neural::piper_models(&neural::piper_dirs(&known))),
+        "cloud": named(CLOUD_VOICES),
+        "cloudModels": named(CLOUD_MODELS),
+    }))
 }
 
 fn status(s: &mut Session, _: &Value) -> CmdResult {
@@ -351,6 +370,15 @@ mod tests {
         // A bad value changes nothing.
         assert!(s.run("readAloud.settings", &json!({"engine": "local", "voices": {"marker": "xy"}})).is_err());
         assert_eq!(s.read_aloud.settings().engine, crate::speech::Engine::Cloud);
+    }
+
+    #[test]
+    fn voice_lists_for_every_engine() {
+        let mut s = Session::new(Document::from_text("x"));
+        let r = s.run("readAloud.voices", &json!({"refresh": true})).unwrap();
+        assert!(r["system"].is_array() && r["local"].is_array());
+        assert!(r["cloud"].as_array().unwrap().iter().any(|v| v["id"] == "nova"));
+        assert!(r["cloudModels"].as_array().unwrap().iter().any(|v| v["id"] == "tts-1"));
     }
 
     #[test]

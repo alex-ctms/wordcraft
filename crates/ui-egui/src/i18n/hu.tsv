@@ -893,6 +893,7 @@
 	Play/Pause	Lejátszás/szünet
 	Read Aloud Status	Felolvasás állapota
 	Read Aloud Settings	Felolvasás beállításai
+	Read Aloud Voices	Felolvasási hangok
 	Reading Speed	Olvasási sebesség
 	Skip Citations and Bibliography	Hivatkozások és irodalomjegyzék kihagyása
 	Skip citations & bibliography	Hivatkozások és irodalomjegyzék kihagyása
@@ -2733,3 +2734,8 @@
 	Voice:	Hang:
 	Voices and text settings…	Hangok és szövegbeállítások…
 	Web addresses:	Webcímek:
+	Default voice	Alapértelmezett hang
+	No voices found	Nem található hang
+	Pick a voice	Válasszon hangot
+	Find voices again	Hangok keresése újra
+	Ask the speech program and the voice folders for their voices again	A hangok újbóli lekérése a beszédprogramtól és a hangmappákból

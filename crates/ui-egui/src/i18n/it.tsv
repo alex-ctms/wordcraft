@@ -969,6 +969,7 @@
 	Play/Pause	Riproduci/pausa
 	Read Aloud Status	Stato lettura ad alta voce
 	Read Aloud Settings	Impostazioni lettura ad alta voce
+	Read Aloud Voices	Voci della lettura ad alta voce
 	Reading Speed	Velocità di lettura
 	Skip Citations and Bibliography	Salta citazioni e bibliografia
 	Skip citations & bibliography	Salta citazioni e bibliografia
@@ -2746,3 +2747,8 @@ preview	Title	Esempio
 	Voice:	Voce:
 	Voices and text settings…	Voci e impostazioni del testo…
 	Web addresses:	Indirizzi web:
+	Default voice	Voce predefinita
+	No voices found	Nessuna voce trovata
+	Pick a voice	Scegli una voce
+	Find voices again	Cerca di nuovo le voci
+	Ask the speech program and the voice folders for their voices again	Chiedi di nuovo le voci al programma vocale e alle cartelle delle voci

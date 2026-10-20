@@ -908,6 +908,7 @@ preview	Title	Örnek
 	Play/Pause	Oynat/Duraklat
 	Read Aloud Status	Sesli Okuma Durumu
 	Read Aloud Settings	Sesli Okuma Ayarları
+	Read Aloud Voices	Sesli Okuma Sesleri
 	Reading Speed	Okuma Hızı
 	Skip Citations and Bibliography	Atıfları ve Kaynakçayı Atla
 	Skip citations & bibliography	Atıfları ve kaynakçayı atla
@@ -2734,3 +2735,8 @@ preview	Title	Örnek
 	Voice:	Ses:
 	Voices and text settings…	Sesler ve metin ayarları…
 	Web addresses:	Web adresleri:
+	Default voice	Varsayılan ses
+	No voices found	Ses bulunamadı
+	Pick a voice	Bir ses seçin
+	Find voices again	Sesleri yeniden bul
+	Ask the speech program and the voice folders for their voices again	Sesleri konuşma programından ve ses klasörlerinden yeniden iste

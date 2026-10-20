@@ -901,6 +901,7 @@ preview	Title	Пример
 	Play/Pause	Воспроизведение/пауза
 	Read Aloud Status	Состояние чтения вслух
 	Read Aloud Settings	Параметры чтения вслух
+	Read Aloud Voices	Голоса чтения вслух
 	Reading Speed	Скорость чтения
 	Skip Citations and Bibliography	Пропускать ссылки и список литературы
 	Skip citations & bibliography	Пропускать ссылки и список литературы
@@ -2735,3 +2736,8 @@ preview	Title	Пример
 	Voice:	Голос:
 	Voices and text settings…	Голоса и параметры текста…
 	Web addresses:	Веб-адреса:
+	Default voice	Голос по умолчанию
+	No voices found	Голоса не найдены
+	Pick a voice	Выберите голос
+	Find voices again	Найти голоса снова
+	Ask the speech program and the voice folders for their voices again	Снова запросить голоса у программы речи и в папках голосов

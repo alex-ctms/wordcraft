@@ -482,6 +482,65 @@ fn speech_field(ui: &mut Ui, id: &str, current: &str, multiline: bool, width: f3
     }
 }
 
+/// What a voice field asks for.
+enum VoicePick {
+    /// Use this voice (empty: the engine's default).
+    Set(String),
+    /// Pick a model file.
+    Browse,
+}
+
+/// The voices `readAloud.voices` found for `engine` (`system`, `local`, `cloud`, `cloudModels`),
+/// as (id, label). The list is asked for once, when the pane first shows.
+fn voice_choices(app: &mut WordApp, engine: &str) -> Vec<(String, String)> {
+    if app.read_aloud_voices.is_none() {
+        app.read_aloud_voices = Some(app.run("readAloud.voices", json!({})).unwrap_or_default());
+    }
+    let list = app.read_aloud_voices.as_ref().and_then(|v| v.get(engine)).and_then(Value::as_array).cloned().unwrap_or_default();
+    list.iter().filter_map(|c| Some((c["id"].as_str()?.to_string(), c["label"].as_str()?.to_string()))).collect()
+}
+
+/// A voice field: type any voice name or path, or pick one of the `choices` found from the list
+/// next to it. With `browse`, the list also offers to pick a model file.
+fn voice_field(ui: &mut Ui, id: &str, current: &str, choices: &[(String, String)], width: f32, browse: bool) -> Option<VoicePick> {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 2.0;
+        let mut out = speech_field(ui, id, current, false, width).map(VoicePick::Set);
+        let shown = choices.iter().find(|(c, _)| c == current).map(|(_, l)| l.clone());
+        let r = egui::ComboBox::from_id_salt(("read-aloud-voices", id)).width(18.0).selected_text("").show_ui(ui, |ui| {
+            ui.set_min_width(280.0);
+            if ui.selectable_label(current.is_empty(), tl!("Default voice")).clicked() {
+                out = Some(VoicePick::Set(String::new()));
+            }
+            if choices.is_empty() {
+                ui.label(RichText::new(tl!("No voices found")).weak());
+            }
+            for (c, label) in choices {
+                if ui.selectable_label(c == current, label).clicked() {
+                    out = Some(VoicePick::Set(c.clone()));
+                }
+            }
+            if browse {
+                ui.separator();
+                if ui.selectable_label(false, tl!("Browse…")).clicked() {
+                    out = Some(VoicePick::Browse);
+                }
+            }
+        });
+        r.response.on_hover_text(shown.unwrap_or_else(|| tl!("Pick a voice").to_string()));
+        out
+    })
+    .inner
+}
+
+/// Pick a Piper model file for the default neural voice (`None`) or a voice role.
+fn browse_voice_model(app: &mut WordApp, role: Option<usize>) {
+    use crate::file_dialogs::{AfterPick, Asked, FileDialogRequest};
+    if let Asked::Done(Err(e)) = app.ask_file(FileDialogRequest::Open { purpose: "voiceModel".into() }, AfterPick::VoiceModel { role }) {
+        app.status(e);
+    }
+}
+
 /// Read Aloud › voice engine and how much is read at a time.
 fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
     use wordcraft_engine::speech::{Chunk, Engine};
@@ -514,8 +573,11 @@ fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
                 }
                 ui.end_row();
                 ui.label(tl!("Voice model:"));
-                if let Some(t) = speech_field(ui, "local.voice", &s.local.voice, false, 320.0) {
-                    speech(app, json!({"local": {"voice": t}}));
+                let found = voice_choices(app, "local");
+                match voice_field(ui, "local.voice", &s.local.voice, &found, 300.0, true) {
+                    Some(VoicePick::Set(t)) => speech(app, json!({"local": {"voice": t}})),
+                    Some(VoicePick::Browse) => browse_voice_model(app, None),
+                    None => {}
                 }
                 ui.end_row();
                 ui.label(tl!("Arguments (one per line):"));
@@ -532,14 +594,24 @@ fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
         }
         Engine::Cloud => {
             egui::Grid::new("read_aloud_cloud").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
-                for (label, key, value) in [
-                    ("Address:", "endpoint", &s.cloud.endpoint),
-                    ("Model:", "model", &s.cloud.model),
-                    ("Voice:", "voice", &s.cloud.voice),
-                    ("API key variable:", "apiKeyEnv", &s.cloud.api_key_env),
+                for (label, key, value, list) in [
+                    ("Address:", "endpoint", &s.cloud.endpoint, None),
+                    ("Model:", "model", &s.cloud.model, Some("cloudModels")),
+                    ("Voice:", "voice", &s.cloud.voice, Some("cloud")),
+                    ("API key variable:", "apiKeyEnv", &s.cloud.api_key_env, None),
                 ] {
                     ui.label(tl!(label));
-                    if let Some(t) = speech_field(ui, &format!("cloud.{key}"), value, false, 320.0) {
+                    let picked = match list {
+                        Some(engine) => {
+                            let found = voice_choices(app, engine);
+                            match voice_field(ui, &format!("cloud.{key}"), value, &found, 300.0, false) {
+                                Some(VoicePick::Set(t)) => Some(t),
+                                _ => None,
+                            }
+                        }
+                        None => speech_field(ui, &format!("cloud.{key}"), value, false, 320.0),
+                    };
+                    if let Some(t) = picked {
                         speech(app, json!({"cloud": { key: t }}));
                     }
                     ui.end_row();
@@ -670,6 +742,11 @@ fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
         });
         note(ui, "Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.");
         ui.add_space(4.0);
+        if ui.button(tl!("Find voices again")).on_hover_text(tl!("Ask the speech program and the voice folders for their voices again")).clicked() {
+            app.read_aloud_voices = Some(app.run("readAloud.voices", json!({"refresh": true})).unwrap_or_default());
+        }
+        let lists = [("system", voice_choices(app, "system")), ("local", voice_choices(app, "local")), ("cloud", voice_choices(app, "cloud"))];
+        let mut browse_role = None;
         // Every role as `readAloud.settings` takes it: [narrator, role…].
         let mut roles: Vec<Value> =
             std::iter::once(all["voices"]["narrator"].clone()).chain(all["voices"]["roles"].as_array().cloned().unwrap_or_default()).collect();
@@ -687,10 +764,15 @@ fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
                     role["label"] = json!(t.trim());
                     changed = true;
                 }
-                for key in ["system", "local", "cloud"] {
-                    if let Some(t) = speech_field(ui, &format!("role{i}.{key}"), role[key].as_str().unwrap_or(""), false, 110.0) {
-                        role[key] = json!(t);
-                        changed = true;
+                for (key, found) in &lists {
+                    let current = role[*key].as_str().unwrap_or("").to_string();
+                    match voice_field(ui, &format!("role{i}.{key}"), &current, found, 100.0, *key == "local") {
+                        Some(VoicePick::Set(t)) => {
+                            role[*key] = json!(t);
+                            changed = true;
+                        }
+                        Some(VoicePick::Browse) => browse_role = Some(i),
+                        None => {}
                     }
                 }
                 let mut rate = role["rate"].as_f64().unwrap_or(1.0) as f32;
@@ -715,6 +797,9 @@ fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
                 roles.push(json!({"label": label}));
                 changed = true;
             }
+        }
+        if let Some(i) = browse_role {
+            browse_voice_model(app, Some(i));
         }
         if changed {
             let narrator = roles.first().cloned().unwrap_or(Value::Null);

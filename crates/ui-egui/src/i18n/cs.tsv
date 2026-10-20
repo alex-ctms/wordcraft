@@ -911,6 +911,7 @@
 	Read Aloud	Číst nahlas
 	Read Aloud Status	Stav čtení nahlas
 	Read Aloud Settings	Nastavení čtení nahlas
+	Read Aloud Voices	Hlasy čtení nahlas
 	Read Mode	Režim čtení
 	Read\nAloud	Číst\nnahlas
 	Read\nMode	Režim\nčtení
@@ -2729,3 +2730,8 @@ preview	Title	Ukázka
 	Voice:	Hlas:
 	Voices and text settings…	Hlasy a nastavení textu…
 	Web addresses:	Webové adresy:
+	Default voice	Výchozí hlas
+	No voices found	Nenalezeny žádné hlasy
+	Pick a voice	Vyberte hlas
+	Find voices again	Znovu najít hlasy
+	Ask the speech program and the voice folders for their voices again	Znovu zjistit hlasy z programu pro řeč a ze složek s hlasy
