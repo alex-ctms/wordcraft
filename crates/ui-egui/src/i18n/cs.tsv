@@ -910,6 +910,7 @@
 	Raised/lowered	Zvýšené/snížené
 	Read Aloud	Číst nahlas
 	Read Aloud Status	Stav čtení nahlas
+	Read Aloud Settings	Nastavení čtení nahlas
 	Read Mode	Režim čtení
 	Read\nAloud	Číst\nnahlas
 	Read\nMode	Režim\nčtení
@@ -2691,3 +2692,40 @@ preview	Title	Ukázka
 	Type a size in any unit, such as 5 cm or 300 px. The other side follows, so the picture keeps its proportions.	Zadejte velikost v libovolné jednotce, například 5 cm nebo 300 px. Druhá strana se přizpůsobí, takže obrázek zachová své proporce.
 
 	Import…	Importovat…
+	A marker changes the voice:	Značka mění hlas:
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Přirozený hlas ze služby řeči kompatibilní s OpenAI. Čtený text se odesílá této službě.
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Přirozený hlas, který běží na tomto počítači. Nejprve nainstalujte Piper a model hlasu.
+	Add a voice	Přidat hlas
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Prázdný hlas použije výchozí hlas modulu. Rychlost je vzhledem k rychlosti čtení.
+	Change the voice where a marker character starts the text	Měnit hlas tam, kde text začíná znakem značky
+	Characters to skip:	Znaky k přeskočení:
+	Cloud voice	Cloudový hlas
+	Cloud voice (sends the text to a service)	Cloudový hlas (odesílá text službě)
+	Label	Popisek
+	Marker character:	Znak značky:
+	Narrator	Vypravěč
+	Neural voice	Neuronový hlas
+	Neural voice on this computer (Piper)	Neuronový hlas na tomto počítači (Piper)
+	One paragraph	Jeden odstavec
+	Read Aloud prepares and reads this much text, then goes on to the next part. A neural or cloud voice renders it ahead.	Čtení nahlas připraví a přečte tolik textu a pak přejde na další část. Neuronový nebo cloudový hlas jej vytvoří předem.
+	Read Aloud: text	Čtení nahlas: text
+	Read Aloud: voices	Čtení nahlas: hlasy
+	Read at a time:	Číst najednou:
+	Read the site name only	Číst jen název webu
+	Say instead (one per line, text = spoken as):	Vyslovit místo toho (jedno na řádek, text = výslovnost):
+	Skip emoji	Přeskakovat emoji
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	Přeskakovat znaky formátování (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Přeskakovat opakovanou interpunkci (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Přeskakovat symboly (šipky, rámečky, odrážky, znaky ikon)
+	Skip text in (parentheses)	Přeskakovat text v (kulatých závorkách)
+	Skip text in [square brackets]	Přeskakovat text v [hranatých závorkách]
+	Skip text that matches (regular expressions, one per line):	Přeskakovat odpovídající text (regulární výrazy, jeden na řádek):
+	System voice	Systémový hlas
+	System voice (on this computer)	Systémový hlas (na tomto počítači)
+	The speech program of your operating system.	Program pro řeč vašeho operačního systému.
+	The text on the page doesn't change. Only the spoken text does.	Text na stránce se nemění. Mění se jen vyslovený text.
+	To the end of the paragraph	Do konce odstavce
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Před text napište značku a popisek hlasu, například §A Ahoj. Zpět k vypravěči se vrátíte pomocí §N nebo §Narrator.
+	Voice:	Hlas:
+	Voices and text settings…	Hlasy a nastavení textu…
+	Web addresses:	Webové adresy:
