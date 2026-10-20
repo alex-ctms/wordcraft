@@ -974,6 +974,7 @@
 	Play/Pause	Phát/Tạm dừng
 	Read Aloud Status	Trạng thái đọc to
 	Read Aloud Settings	Cài đặt đọc to
+	Read Aloud Voices	Giọng đọc to
 	Reading Speed	Tốc độ đọc
 	Skip Citations and Bibliography	Bỏ qua trích dẫn và danh mục tham khảo
 	Skip citations & bibliography	Bỏ qua trích dẫn và danh mục tham khảo
@@ -2777,3 +2778,8 @@ template	Letter	Thư
 	Voice:	Giọng:
 	Voices and text settings…	Giọng và cài đặt văn bản…
 	Web addresses:	Địa chỉ web:
+	Default voice	Giọng mặc định
+	No voices found	Không tìm thấy giọng
+	Pick a voice	Chọn một giọng
+	Find voices again	Tìm lại giọng
+	Ask the speech program and the voice folders for their voices again	Hỏi lại chương trình giọng nói và các thư mục giọng

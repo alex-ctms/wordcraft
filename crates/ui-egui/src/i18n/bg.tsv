@@ -982,6 +982,7 @@
 	Play/Pause	Възпроизвеждане/пауза
 	Read Aloud Status	Състояние на четенето на глас
 	Read Aloud Settings	Настройки на четенето на глас
+	Read Aloud Voices	Гласове за четене на глас
 	Reading Speed	Скорост на четене
 	Skip Citations and Bibliography	Пропускане на цитиранията и библиографията
 	Skip citations & bibliography	Пропускане на цитиранията и библиографията
@@ -2726,3 +2727,8 @@
 	Voice:	Глас:
 	Voices and text settings…	Гласове и настройки на текста…
 	Web addresses:	Уеб адреси:
+	Default voice	Глас по подразбиране
+	No voices found	Не са намерени гласове
+	Pick a voice	Изберете глас
+	Find voices again	Търсене на гласове отново
+	Ask the speech program and the voice folders for their voices again	Повторно запитване към програмата за реч и папките с гласове

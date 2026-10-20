@@ -1065,6 +1065,7 @@
 	Play/Pause	Spela upp/pausa
 	Read Aloud Status	Status för uppläsning
 	Read Aloud Settings	Inställningar för uppläsning
+	Read Aloud Voices	Röster för uppläsning
 	Reading Speed	Läshastighet
 	Skip Citations and Bibliography	Hoppa över källhänvisningar och källförteckning
 	Skip citations & bibliography	Hoppa över källhänvisningar och källförteckning
@@ -2752,3 +2753,8 @@ preview	Title	Titel
 	Voice:	Röst:
 	Voices and text settings…	Röster och textinställningar…
 	Web addresses:	Webbadresser:
+	Default voice	Standardröst
+	No voices found	Inga röster hittades
+	Pick a voice	Välj en röst
+	Find voices again	Sök röster igen
+	Ask the speech program and the voice folders for their voices again	Fråga talprogrammet och röstmapparna efter röster igen

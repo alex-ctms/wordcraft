@@ -1711,6 +1711,7 @@ template	Letter	Pismo
 	Read Aloud	Čitaj naglas
 	Read Aloud Status	Status čitanja naglas
 	Read Aloud Settings	Postavke čitanja naglas
+	Read Aloud Voices	Glasovi za čitanje naglas
 	Read Mode	Čitanje
 	Read\nAloud	Čitaj\nnaglas
 	Read\nMode	Čitanje
@@ -2737,3 +2738,8 @@ preview	Title	Naslov
 	Voice:	Glas:
 	Voices and text settings…	Glasovi i postavke teksta…
 	Web addresses:	Web-adrese:
+	Default voice	Zadani glas
+	No voices found	Nema pronađenih glasova
+	Pick a voice	Odaberite glas
+	Find voices again	Ponovno pronađi glasove
+	Ask the speech program and the voice folders for their voices again	Ponovno zatraži glasove od govornog programa i mapa s glasovima

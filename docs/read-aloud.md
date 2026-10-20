@@ -1,6 +1,6 @@
 # Read Aloud
 
-> **Last updated:** 2026-10-20 · **Change:** minor (first version: voice engines, reading unit, text rules, voice roles)
+> **Last updated:** 2026-10-20 · **Change:** trivial (voice lists for each engine; previously minor: first version: voice engines, reading unit, text rules, voice roles)
 
 Read Aloud reads the document to you. It highlights the sentence that it reads, and the caret
 follows that sentence. This page tells you how to set the voice, how much text Read Aloud reads
@@ -32,7 +32,12 @@ uses the same request.
 2. Download a Piper voice model. A model is an `.onnx` file and a `.onnx.json` file.
 3. Open **File › Options › Accessibility**.
 4. Select **Neural voice on this computer (Piper)**.
-5. In **Voice model**, type the full path of the `.onnx` file.
+5. In **Voice model**, select the model from the list. If the model is not in the list, select
+   **Browse…** in the list, or type the full path of the `.onnx` file.
+
+The list shows the `.onnx` files in the folders of the models that you use, and in the usual
+download folders (for example `~/.local/share/piper-voices`). Piper 1.8 installs with
+`uv tool install piper-tts`. Its `python -m piper.download_voices` command downloads models.
 
 Read Aloud gives the sentence to the program on stdin. The program writes a WAV file. The
 default arguments are:
@@ -147,10 +152,15 @@ Rules for markers:
 To set the roles, use the table in **File › Options › Accessibility › Read Aloud: voices**:
 
 - **Label**: the text after the marker. Use letters, digits and `_`, 24 characters maximum.
-- **System voice**, **Neural voice**, **Cloud voice**: the voice for each engine. For the system
-  voice, type a voice name (macOS: `say -v '?'` lists them; Linux: `espeak-ng --voices`). For the
-  neural voice, type the path of a Piper model. For the cloud voice, type a voice name such as
-  `nova`. An empty field uses the default voice of the engine.
+- **System voice**, **Neural voice**, **Cloud voice**: the voice for each engine. Select a voice
+  from the list next to the field, or type a voice name or a path in the field.
+  - The system list shows the voices of the speech program (`say -v '?'` on macOS,
+    `espeak-ng --voices` on Linux and BSD, the installed voices on Windows).
+  - The neural list shows the Piper models that WordCraft finds. Select **Browse…** to select a
+    model file in a different folder.
+  - The cloud list shows the voices of the OpenAI speech service, such as `nova`.
+  - **Default voice** clears the field. An empty field uses the default voice of the engine.
+- Select **Find voices again** after you install a voice.
 - **Speed**: the speed of the role, relative to the reading speed (0.5× to 2×).
 
 Use **Add a voice** to add a role. You can have 26 roles and the Narrator. To use a different
@@ -168,6 +178,10 @@ wordcraft-cli run --template sample \
   --cmd 'readAloud.settings={"chunk":"page","voices":{"marker":"^"}}' \
   --cmd review.readAloud
 ```
+
+`readAloud.voices` returns the voices in the lists: `system`, `local`, `cloud` and
+`cloudModels`, each a list of `{"id", "label"}`. With `{"refresh": true}`, it asks the speech
+program again.
 
 `readAloud.status` also returns `engine`, `chunk`, `chunkIndex`, `chunkCount` and `voice` (the role
 label of the sentence that Read Aloud reads).
@@ -195,4 +209,5 @@ These items are not in WordCraft yet:
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-20 | trivial | Voice lists for each engine, Browse… for Piper models, `readAloud.voices` |
 | 2026-10-20 | minor | First version: system, Piper and cloud voices; paragraph, page and document reading; text rules; voice roles with a marker character |

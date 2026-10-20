@@ -603,6 +603,9 @@ pub struct WordApp {
     /// Read Aloud: the start of the sentence the caret was last moved to, and the last error shown.
     pub(crate) read_aloud_at: Option<wordcraft_engine::doc::Pos>,
     pub(crate) read_aloud_error: Option<String>,
+    /// The voices File › Options › Accessibility lists (`readAloud.voices`), asked for when the
+    /// pane first shows and again on "Find voices again" or a picked model.
+    pub(crate) read_aloud_voices: Option<serde_json::Value>,
     /// The file the document was last explicitly saved to in this session; AutoSave writes only
     /// there. A file that was merely opened isn't rewritten until the user saves it: saving drops
     /// whatever WordCraft can't represent (content controls, charts, macros…).
@@ -711,6 +714,7 @@ impl WordApp {
             ctx: None,
             read_aloud_at: None,
             read_aloud_error: None,
+            read_aloud_voices: None,
             autosave_path: None,
             saves_in_flight: Vec::new(),
             awaiting_save: None,
@@ -2601,6 +2605,7 @@ pub(crate) fn works_without_document(id: &str) -> bool {
             | "readAloud.speed"
             | "readAloud.skipCitations"
             | "readAloud.settings"
+            | "readAloud.voices"
             | "tools.customizeKeyboard"
             | "tools.customizeRibbon"
             | "view.darkMode"

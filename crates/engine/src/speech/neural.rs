@@ -1,6 +1,6 @@
 //! Neural voices: a local voice program (Piper, or any program the user sets) or an
 //! OpenAI-compatible cloud service makes a WAV file for each sentence, and the system's audio
-//! player plays it.
+//! player plays it. The voices each engine has are listed here too, for the settings' lists.
 //!
 //! The cloud request goes through the system's `curl` (macOS, Windows 10 and later, Linux), so
 //! WordCraft needs no HTTP or TLS library. The API key goes to `curl` on stdin, never on the
@@ -210,6 +210,167 @@ pub(crate) fn has_audio(path: &Path) -> bool {
     std::fs::metadata(path).is_ok_and(|m| m.len() > 44)
 }
 
+/// A voice the user can pick: what the settings keep (`id`: a voice name, a language code or a
+/// model path) and what the list shows.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VoiceChoice {
+    pub id: String,
+    pub label: String,
+}
+
+impl VoiceChoice {
+    fn new(id: impl Into<String>, label: impl Into<String>) -> VoiceChoice {
+        VoiceChoice { id: id.into(), label: label.into() }
+    }
+    pub fn to_json(&self) -> serde_json::Value {
+        json!({"id": self.id, "label": self.label})
+    }
+}
+
+/// The voices an OpenAI-compatible speech service has (other services may have more: the field
+/// takes any name).
+pub const CLOUD_VOICES: &[&str] = &["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"];
+/// Its speech models.
+pub const CLOUD_MODELS: &[&str] = &["tts-1", "tts-1-hd", "gpt-4o-mini-tts"];
+/// Most voices a list holds.
+const MAX_CHOICES: usize = 1000;
+
+/// The voices in `espeak-ng --voices`'s `listing`: a header line, then `Pty Language Age/Gender
+/// VoiceName File …` per voice. The language code is what `-v` takes.
+pub(crate) fn espeak_voices(listing: &str) -> Vec<VoiceChoice> {
+    listing
+        .lines()
+        .skip(1)
+        .filter_map(|l| {
+            let mut w = l.split_whitespace();
+            let (_, lang, _, name) = (w.next()?, w.next()?, w.next()?, w.next()?);
+            (!lang.starts_with('-') && lang != "variant").then(|| VoiceChoice::new(lang, format!("{} ({lang})", name.replace('_', " "))))
+        })
+        .take(MAX_CHOICES)
+        .collect()
+}
+
+/// The voices in `say -v '?'`'s `listing`, without the novelty voices.
+#[cfg(any(target_os = "macos", test))]
+pub(crate) fn mac_choices(listing: &str) -> Vec<VoiceChoice> {
+    super::mac_voices(listing)
+        .filter(|(name, _)| !super::MAC_NOVELTY_VOICES.contains(&name.as_str()) && !name.starts_with('-'))
+        .map(|(name, code)| VoiceChoice::new(name.clone(), format!("{name} ({code})")))
+        .take(MAX_CHOICES)
+        .collect()
+}
+
+/// The voices in the Windows listing: `Name|culture` per line.
+pub(crate) fn windows_choices(listing: &str) -> Vec<VoiceChoice> {
+    listing
+        .lines()
+        .filter_map(|l| {
+            let (name, culture) = l.trim().split_once('|')?;
+            let name = name.trim();
+            (!name.is_empty() && !name.starts_with('-')).then(|| VoiceChoice::new(name, format!("{name} ({})", culture.trim())))
+        })
+        .take(MAX_CHOICES)
+        .collect()
+}
+
+/// The voices of the system's speech program (asked once; `refresh` asks again).
+pub fn system_voices(refresh: bool) -> Vec<VoiceChoice> {
+    static CACHE: std::sync::Mutex<Option<Vec<VoiceChoice>>> = std::sync::Mutex::new(None);
+    let mut c = CACHE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if refresh || c.is_none() {
+        *c = Some(ask_system_voices());
+    }
+    c.clone().unwrap_or_default()
+}
+
+/// Ask the speech program for its voices (none in tests, which never start speech programs, and
+/// in the browser).
+fn ask_system_voices() -> Vec<VoiceChoice> {
+    #[cfg(any(test, target_arch = "wasm32"))]
+    {
+        Vec::new()
+    }
+    #[cfg(not(any(test, target_arch = "wasm32")))]
+    {
+        let out = |program: PathBuf, args: &[&str]| {
+            let mut c = std::process::Command::new(program);
+            c.args(args).stdin(std::process::Stdio::null()).stderr(std::process::Stdio::null());
+            #[cfg(target_os = "windows")]
+            std::os::windows::process::CommandExt::creation_flags(&mut c, super::CREATE_NO_WINDOW);
+            c.output().ok().filter(|o| o.status.success()).map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        };
+        if cfg!(target_os = "macos") {
+            #[cfg(target_os = "macos")]
+            return mac_choices(super::mac_voice_listing());
+        }
+        if cfg!(target_os = "windows") {
+            let script = "Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).GetInstalledVoices() | Where-Object { $_.Enabled } | ForEach-Object { $_.VoiceInfo.Name + '|' + $_.VoiceInfo.Culture.Name }";
+            let ps = super::windows_powershell(std::env::var_os("SystemRoot"));
+            return out(ps, &["-NoProfile", "-NonInteractive", "-Command", script]).map(|l| windows_choices(&l)).unwrap_or_default();
+        }
+        ["espeak-ng", "espeak"].iter().find_map(|p| out(PathBuf::from(p), &["--voices"])).map(|l| espeak_voices(&l)).unwrap_or_default()
+    }
+}
+
+/// The folders Piper voice models are looked for in: the folders of `known` models (the ones the
+/// settings already use), then the usual places voice downloads go.
+pub fn piper_dirs(known: &[&str]) -> Vec<PathBuf> {
+    let mut dirs: Vec<PathBuf> = known.iter().filter(|p| !p.is_empty()).filter_map(|p| Path::new(p).parent().map(Path::to_path_buf)).collect();
+    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(PathBuf::from);
+    let data = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from).or_else(|| home.as_ref().map(|h| h.join(".local").join("share")));
+    for base in [data, std::env::var_os("APPDATA").map(PathBuf::from), std::env::var_os("LOCALAPPDATA").map(PathBuf::from)].into_iter().flatten() {
+        dirs.extend(["piper-voices", "piper/voices", "piper"].iter().map(|d| base.join(d)));
+    }
+    if let Some(h) = &home {
+        dirs.extend([
+            h.join("piper-voices"),
+            h.join(".piper"),
+            h.join("Library/Application Support/piper"),
+            h.join("Library/Application Support/piper-voices"),
+        ]);
+    }
+    let mut seen = Vec::new();
+    dirs.retain(|d| {
+        let new = !seen.contains(d);
+        seen.push(d.clone());
+        new
+    });
+    dirs
+}
+
+/// The Piper voice models (`.onnx` files) in `dirs` and their subfolders one level down, by name.
+pub fn piper_models(dirs: &[PathBuf]) -> Vec<VoiceChoice> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = dirs;
+        Vec::new()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let mut out: Vec<VoiceChoice> = Vec::new();
+        let mut add = |path: &Path| {
+            let is_model = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("onnx"));
+            let id = path.to_string_lossy().into_owned();
+            if is_model && out.len() < MAX_CHOICES && !id.starts_with('-') && !out.iter().any(|c| c.id == id) {
+                let name = path.file_stem().map_or_else(|| id.clone(), |s| s.to_string_lossy().into_owned());
+                out.push(VoiceChoice::new(id, name));
+            }
+        };
+        let entries = |d: &Path| std::fs::read_dir(d).into_iter().flatten().flatten().map(|e| e.path()).take(MAX_CHOICES).collect::<Vec<_>>();
+        for d in dirs {
+            for p in entries(d) {
+                if p.is_dir() {
+                    entries(&p).iter().for_each(|q| add(q));
+                } else {
+                    add(&p);
+                }
+            }
+        }
+        out.sort_by(|a, b| a.label.to_lowercase().cmp(&b.label.to_lowercase()).then_with(|| a.id.cmp(&b.id)));
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,6 +415,48 @@ mod tests {
         let mut bad = c.clone();
         bad.endpoint = "http://example.com".into();
         assert!(cloud_run(&bad, Some("k"), body, out).is_err());
+    }
+
+    #[test]
+    fn system_voice_listings_are_read() {
+        let espeak = "Pty Language       Age/Gender VoiceName          File                 Other Languages\n 5  af              --/M      Afrikaans          gmw/af\n 5  en-gb           --/M      English_(Great_Britain) gmw/en  (en 2)\n\n garbage\n";
+        assert_eq!(espeak_voices(espeak), [VoiceChoice::new("af", "Afrikaans (af)"), VoiceChoice::new("en-gb", "English (Great Britain) (en-gb)")]);
+        let mac = "Albert              en_US    # Hello!\nSamantha            en_US    # Hello!\nEddy (Russian (Russia)) ru_RU    # Привет!\n";
+        assert_eq!(
+            mac_choices(mac),
+            [VoiceChoice::new("Samantha", "Samantha (en_us)"), VoiceChoice::new("Eddy (Russian (Russia))", "Eddy (Russian (Russia)) (ru_ru)")]
+        );
+        assert_eq!(
+            windows_choices("Microsoft Zira Desktop|en-US\n|x\n-bad|en\nnoculture\n"),
+            [VoiceChoice::new("Microsoft Zira Desktop", "Microsoft Zira Desktop (en-US)")]
+        );
+        assert!(system_voices(true).is_empty(), "tests never start a speech program");
+    }
+
+    #[test]
+    fn piper_models_are_found_in_their_folders() {
+        let dir = std::env::temp_dir().join(format!("wordcraft-piper-test-{}", std::process::id()));
+        let sub = dir.join("en").join("en_US");
+        std::fs::create_dir_all(dir.join("en")).unwrap();
+        std::fs::create_dir_all(&sub).unwrap();
+        for f in [
+            dir.join("b-voice.onnx"),
+            dir.join("b-voice.onnx.json"),
+            dir.join("en").join("A-voice.ONNX"),
+            sub.join("too-deep.onnx"),
+            dir.join("notes.txt"),
+        ] {
+            std::fs::write(f, b"x").unwrap();
+        }
+        let found = piper_models(&[dir.clone(), dir.clone(), dir.join("missing")]);
+        let names: Vec<&str> = found.iter().map(|c| c.label.as_str()).collect();
+        assert_eq!(names, ["A-voice", "b-voice"]);
+        assert!(found[1].id.ends_with("b-voice.onnx"));
+        let _ = std::fs::remove_dir_all(&dir);
+        // The folder of a model in use comes first, and no folder twice.
+        let dirs = piper_dirs(&["/voices/x.onnx", "", "/voices/y.onnx"]);
+        assert_eq!(dirs.first(), Some(&PathBuf::from("/voices")));
+        assert_eq!(dirs.iter().filter(|d| d.as_path() == Path::new("/voices")).count(), 1);
     }
 
     #[test]
