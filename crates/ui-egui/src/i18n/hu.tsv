@@ -892,6 +892,7 @@
 	Previous sentence	Előző mondat
 	Play/Pause	Lejátszás/szünet
 	Read Aloud Status	Felolvasás állapota
+	Read Aloud Settings	Felolvasás beállításai
 	Reading Speed	Olvasási sebesség
 	Skip Citations and Bibliography	Hivatkozások és irodalomjegyzék kihagyása
 	Skip citations & bibliography	Hivatkozások és irodalomjegyzék kihagyása
@@ -2695,3 +2696,40 @@
 	Type a size in any unit, such as 5 cm or 300 px. The other side follows, so the picture keeps its proportions.	Írj be egy méretet bármilyen mértékegységben, például 5 cm vagy 300 px. A másik oldal követi, így a kép megtartja az arányait.
 
 	Import…	Importálás…
+	A marker changes the voice:	A jelölő váltja a hangot:
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Természetes hang egy OpenAI-kompatibilis beszédszolgáltatásból. A felolvasott szöveg a szolgáltatáshoz kerül.
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Természetes hang, amely ezen a számítógépen fut. Előbb telepítse a Pipert és egy hangmodellt.
+	Add a voice	Hang hozzáadása
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Üres hang esetén a motor alapértelmezett hangja szól. A sebesség a felolvasási sebességhez viszonyított.
+	Change the voice where a marker character starts the text	Hang váltása, ahol jelölő karakter kezdi a szöveget
+	Characters to skip:	Kihagyandó karakterek:
+	Cloud voice	Felhőhang
+	Cloud voice (sends the text to a service)	Felhőhang (a szöveget egy szolgáltatásnak küldi)
+	Label	Címke
+	Marker character:	Jelölő karakter:
+	Narrator	Narrátor
+	Neural voice	Neurális hang
+	Neural voice on this computer (Piper)	Neurális hang ezen a számítógépen (Piper)
+	One paragraph	Egy bekezdés
+	Read Aloud prepares and reads this much text, then goes on to the next part. A neural or cloud voice renders it ahead.	A Felolvasás ennyi szöveget készít elő és olvas fel, majd a következő részre lép. A neurális vagy felhőhang előre elkészíti.
+	Read Aloud: text	Felolvasás: szöveg
+	Read Aloud: voices	Felolvasás: hangok
+	Read at a time:	Egyszerre felolvasva:
+	Read the site name only	Csak a webhely nevének felolvasása
+	Say instead (one per line, text = spoken as):	Helyette mondja (soronként egy, szöveg = kiejtés):
+	Skip emoji	Emojik kihagyása
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	Jelölőnyelvi karakterek kihagyása (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Ismétlődő írásjelek kihagyása (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Szimbólumok kihagyása (nyilak, keretek, felsorolásjelek, ikonkarakterek)
+	Skip text in (parentheses)	(Zárójeles) szöveg kihagyása
+	Skip text in [square brackets]	[Szögletes zárójeles] szöveg kihagyása
+	Skip text that matches (regular expressions, one per line):	Illeszkedő szöveg kihagyása (reguláris kifejezések, soronként egy):
+	System voice	Rendszerhang
+	System voice (on this computer)	Rendszerhang (ezen a számítógépen)
+	The speech program of your operating system.	Az operációs rendszer beszédprogramja.
+	The text on the page doesn't change. Only the spoken text does.	Az oldalon lévő szöveg nem változik. Csak a kimondott szöveg változik.
+	To the end of the paragraph	A bekezdés végéig
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Írja a jelölőt és a hangcímkét a szöveg elé, például §A Szia. A narrátorhoz a §N vagy a §Narrator jelölővel térhet vissza.
+	Voice:	Hang:
+	Voices and text settings…	Hangok és szövegbeállítások…
+	Web addresses:	Webcímek:

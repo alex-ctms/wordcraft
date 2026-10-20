@@ -973,6 +973,7 @@
 	Previous sentence	Câu trước đó
 	Play/Pause	Phát/Tạm dừng
 	Read Aloud Status	Trạng thái đọc to
+	Read Aloud Settings	Cài đặt đọc to
 	Reading Speed	Tốc độ đọc
 	Skip Citations and Bibliography	Bỏ qua trích dẫn và danh mục tham khảo
 	Skip citations & bibliography	Bỏ qua trích dẫn và danh mục tham khảo
@@ -2739,3 +2740,40 @@ template	Letter	Thư
 	Type a size in any unit, such as 5 cm or 300 px. The other side follows, so the picture keeps its proportions.	Nhập kích thước theo đơn vị bất kỳ, ví dụ 5 cm hoặc 300 px. Cạnh còn lại thay đổi theo, nên ảnh giữ nguyên tỷ lệ.
 
 	Import…	Nhập…
+	A marker changes the voice:	Dấu đánh dấu đổi giọng:
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Giọng tự nhiên từ một dịch vụ giọng nói tương thích OpenAI. Văn bản đang đọc được gửi tới dịch vụ đó.
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Giọng tự nhiên chạy trên máy tính này. Hãy cài Piper và một mô hình giọng trước.
+	Add a voice	Thêm giọng
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Giọng để trống sẽ dùng giọng mặc định của bộ máy. Tốc độ tính theo tốc độ đọc.
+	Change the voice where a marker character starts the text	Đổi giọng ở nơi văn bản bắt đầu bằng ký tự đánh dấu
+	Characters to skip:	Ký tự bỏ qua:
+	Cloud voice	Giọng đám mây
+	Cloud voice (sends the text to a service)	Giọng đám mây (gửi văn bản tới một dịch vụ)
+	Label	Nhãn
+	Marker character:	Ký tự đánh dấu:
+	Narrator	Người dẫn chuyện
+	Neural voice	Giọng nơ-ron
+	Neural voice on this computer (Piper)	Giọng nơ-ron trên máy tính này (Piper)
+	One paragraph	Một đoạn văn
+	Read Aloud prepares and reads this much text, then goes on to the next part. A neural or cloud voice renders it ahead.	Đọc to chuẩn bị và đọc chừng này văn bản, rồi chuyển sang phần tiếp theo. Giọng nơ-ron hoặc đám mây tạo âm thanh trước.
+	Read Aloud: text	Đọc to: văn bản
+	Read Aloud: voices	Đọc to: giọng
+	Read at a time:	Đọc mỗi lần:
+	Read the site name only	Chỉ đọc tên trang web
+	Say instead (one per line, text = spoken as):	Nói thay bằng (mỗi dòng một mục, văn bản = cách đọc):
+	Skip emoji	Bỏ qua biểu tượng cảm xúc
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	Bỏ qua ký tự định dạng (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Bỏ qua dấu câu lặp lại (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Bỏ qua ký hiệu (mũi tên, hộp, dấu đầu dòng, ký tự biểu tượng)
+	Skip text in (parentheses)	Bỏ qua văn bản trong (ngoặc đơn)
+	Skip text in [square brackets]	Bỏ qua văn bản trong [ngoặc vuông]
+	Skip text that matches (regular expressions, one per line):	Bỏ qua văn bản khớp (biểu thức chính quy, mỗi dòng một mục):
+	System voice	Giọng hệ thống
+	System voice (on this computer)	Giọng hệ thống (trên máy tính này)
+	The speech program of your operating system.	Chương trình giọng nói của hệ điều hành.
+	The text on the page doesn't change. Only the spoken text does.	Văn bản trên trang không thay đổi. Chỉ văn bản được đọc thay đổi.
+	To the end of the paragraph	Đến hết đoạn văn
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Nhập dấu đánh dấu và nhãn giọng trước văn bản, ví dụ §A Xin chào. Dùng §N hoặc §Narrator để quay lại người dẫn chuyện.
+	Voice:	Giọng:
+	Voices and text settings…	Giọng và cài đặt văn bản…
+	Web addresses:	Địa chỉ web:

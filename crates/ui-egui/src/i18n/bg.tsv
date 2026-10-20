@@ -981,6 +981,7 @@
 	Previous sentence	Предишно изречение
 	Play/Pause	Възпроизвеждане/пауза
 	Read Aloud Status	Състояние на четенето на глас
+	Read Aloud Settings	Настройки на четенето на глас
 	Reading Speed	Скорост на четене
 	Skip Citations and Bibliography	Пропускане на цитиранията и библиографията
 	Skip citations & bibliography	Пропускане на цитиранията и библиографията
@@ -2688,3 +2689,40 @@
 	Type a size in any unit, such as 5 cm or 300 px. The other side follows, so the picture keeps its proportions.	Въведете размер в произволна единица, например 5 cm или 300 px. Другата страна се променя съответно, така че картината запазва пропорциите си.
 
 	Import…	Импортиране…
+	A marker changes the voice:	Маркерът сменя гласа:
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Естествен глас от услуга за реч, съвместима с OpenAI. Четеният текст се изпраща до тази услуга.
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Естествен глас, който работи на този компютър. Първо инсталирайте Piper и гласов модел.
+	Add a voice	Добавяне на глас
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Празен глас използва гласа по подразбиране на машината. Скоростта е спрямо скоростта на четене.
+	Change the voice where a marker character starts the text	Смяна на гласа, където маркерен знак започва текста
+	Characters to skip:	Знаци за пропускане:
+	Cloud voice	Облачен глас
+	Cloud voice (sends the text to a service)	Облачен глас (изпраща текста до услуга)
+	Label	Етикет
+	Marker character:	Маркерен знак:
+	Narrator	Разказвач
+	Neural voice	Невронен глас
+	Neural voice on this computer (Piper)	Невронен глас на този компютър (Piper)
+	One paragraph	Един абзац
+	Read Aloud prepares and reads this much text, then goes on to the next part. A neural or cloud voice renders it ahead.	Четенето на глас подготвя и чете толкова текст, след което преминава към следващата част. Невронният или облачният глас го подготвя предварително.
+	Read Aloud: text	Четене на глас: текст
+	Read Aloud: voices	Четене на глас: гласове
+	Read at a time:	Четене наведнъж:
+	Read the site name only	Четене само на името на сайта
+	Say instead (one per line, text = spoken as):	Произнасяне вместо това (по един на ред, текст = произношение):
+	Skip emoji	Пропускане на емоджи
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	Пропускане на знаци за маркиране (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Пропускане на повтаряща се пунктуация (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Пропускане на символи (стрелки, рамки, водещи знаци, знаци на икони)
+	Skip text in (parentheses)	Пропускане на текст в (кръгли скоби)
+	Skip text in [square brackets]	Пропускане на текст в [квадратни скоби]
+	Skip text that matches (regular expressions, one per line):	Пропускане на съвпадащ текст (регулярни изрази, по един на ред):
+	System voice	Системен глас
+	System voice (on this computer)	Системен глас (на този компютър)
+	The speech program of your operating system.	Програмата за реч на вашата операционна система.
+	The text on the page doesn't change. Only the spoken text does.	Текстът на страницата не се променя. Променя се само изговореният текст.
+	To the end of the paragraph	До края на абзаца
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Въведете маркера и етикета на гласа преди текста, например §A Здравей. Използвайте §N или §Narrator, за да се върнете към разказвача.
+	Voice:	Глас:
+	Voices and text settings…	Гласове и настройки на текста…
+	Web addresses:	Уеб адреси:

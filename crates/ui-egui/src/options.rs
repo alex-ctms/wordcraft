@@ -451,6 +451,277 @@ fn accessibility(app: &mut WordApp, ui: &mut Ui) {
     if ui.checkbox(&mut skip, tl!("Skip citations & bibliography")).changed() {
         let _ = app.run("readAloud.skipCitations", json!({"value": skip}));
     }
+    read_aloud_engine(app, ui);
+    ui.add_space(8.0);
+    read_aloud_text(app, ui);
+    ui.add_space(8.0);
+    read_aloud_voices(app, ui);
+}
+
+/// Change Read Aloud settings through `readAloud.settings` (the command agents use).
+fn speech(app: &mut WordApp, params: Value) {
+    if let Err(e) = app.run("readAloud.settings", params) {
+        app.status(e);
+    }
+}
+
+/// A text field for a Read Aloud setting: what is typed is applied when the field loses focus
+/// (or Enter is pressed), so a half-typed value (a pattern, an address) isn't tried on every key.
+/// Returns the text to apply.
+fn speech_field(ui: &mut Ui, id: &str, current: &str, multiline: bool, width: f32) -> Option<String> {
+    let id = egui::Id::new(("read-aloud-field", id));
+    let mut text = ui.data(|d| d.get_temp::<String>(id)).unwrap_or_else(|| current.to_string());
+    let edit = if multiline { egui::TextEdit::multiline(&mut text).desired_rows(3) } else { egui::TextEdit::singleline(&mut text) };
+    let r = ui.add(edit.desired_width(width));
+    if r.has_focus() {
+        ui.data_mut(|d| d.insert_temp(id, text));
+        None
+    } else {
+        ui.data_mut(|d| d.remove::<String>(id));
+        (r.lost_focus() && text != current).then_some(text)
+    }
+}
+
+/// Read Aloud › voice engine and how much is read at a time.
+fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
+    use wordcraft_engine::speech::{Chunk, Engine};
+    let s = app.session.read_aloud.settings().clone();
+    ui.add_space(4.0);
+    ui.label(tl!("Voice"));
+    for (engine, label, tip) in [
+        (Engine::System, "System voice (on this computer)", "The speech program of your operating system."),
+        (
+            Engine::Local,
+            "Neural voice on this computer (Piper)",
+            "A natural voice that runs on this computer. Install Piper and a voice model first.",
+        ),
+        (
+            Engine::Cloud,
+            "Cloud voice (sends the text to a service)",
+            "A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.",
+        ),
+    ] {
+        if ui.radio(s.engine == engine, tl!(label)).on_hover_text(tl!(tip)).clicked() && s.engine != engine {
+            speech(app, json!({"engine": engine.name()}));
+        }
+    }
+    match s.engine {
+        Engine::Local => {
+            egui::Grid::new("read_aloud_local").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+                ui.label(tl!("Program:"));
+                if let Some(t) = speech_field(ui, "local.program", &s.local.program, false, 320.0) {
+                    speech(app, json!({"local": {"program": t}}));
+                }
+                ui.end_row();
+                ui.label(tl!("Voice model:"));
+                if let Some(t) = speech_field(ui, "local.voice", &s.local.voice, false, 320.0) {
+                    speech(app, json!({"local": {"voice": t}}));
+                }
+                ui.end_row();
+                ui.label(tl!("Arguments (one per line):"));
+                if let Some(t) = speech_field(ui, "local.args", &s.local.args.join("\n"), true, 320.0) {
+                    let args: Vec<&str> = t.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+                    speech(app, json!({"local": {"args": args}}));
+                }
+                ui.end_row();
+            });
+            note(
+                ui,
+                "The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.",
+            );
+        }
+        Engine::Cloud => {
+            egui::Grid::new("read_aloud_cloud").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+                for (label, key, value) in [
+                    ("Address:", "endpoint", &s.cloud.endpoint),
+                    ("Model:", "model", &s.cloud.model),
+                    ("Voice:", "voice", &s.cloud.voice),
+                    ("API key variable:", "apiKeyEnv", &s.cloud.api_key_env),
+                ] {
+                    ui.label(tl!(label));
+                    if let Some(t) = speech_field(ui, &format!("cloud.{key}"), value, false, 320.0) {
+                        speech(app, json!({"cloud": { key: t }}));
+                    }
+                    ui.end_row();
+                }
+            });
+            let found = std::env::var(&s.cloud.api_key_env).is_ok_and(|k| !k.trim().is_empty());
+            let msg = if found {
+                tl!("The API key is set.")
+            } else {
+                tl!("The API key is not set. Set it in this environment variable before you start WordCraft.")
+            };
+            ui.label(RichText::new(msg).small());
+            note(ui, "The cloud voice sends the text being read to the address above. WordCraft never saves the API key.");
+        }
+        Engine::System => {}
+    }
+    ui.add_space(4.0);
+    ui.horizontal(|ui| {
+        ui.label(tl!("Read at a time:"));
+        let name = |c: Chunk| match c {
+            Chunk::Paragraph => "One paragraph",
+            Chunk::Page => "One page",
+            Chunk::Document => "The whole document",
+        };
+        egui::ComboBox::from_id_salt("read_aloud_chunk").selected_text(tl!(name(s.chunk))).width(200.0).show_ui(ui, |ui| {
+            for c in [Chunk::Paragraph, Chunk::Page, Chunk::Document] {
+                if ui.selectable_label(s.chunk == c, tl!(name(c))).clicked() && s.chunk != c {
+                    speech(app, json!({"chunk": c.name()}));
+                }
+            }
+        });
+    });
+    note(ui, "Read Aloud prepares and reads this much text, then goes on to the next part. A neural or cloud voice renders it ahead.");
+}
+
+/// Read Aloud › what is skipped or changed in the text.
+fn read_aloud_text(app: &mut WordApp, ui: &mut Ui) {
+    use wordcraft_engine::speech::UrlMode;
+    let t = app.session.read_aloud.settings().text.clone();
+    section(ui, "Read Aloud: text");
+    ui.horizontal(|ui| {
+        ui.label(tl!("Web addresses:"));
+        let name = |m: UrlMode| match m {
+            UrlMode::Read => "Read all of the address",
+            UrlMode::Domain => "Read the site name only",
+            UrlMode::Skip => "Skip",
+        };
+        egui::ComboBox::from_id_salt("read_aloud_urls").selected_text(tl!(name(t.urls))).width(220.0).show_ui(ui, |ui| {
+            for m in [UrlMode::Read, UrlMode::Domain, UrlMode::Skip] {
+                if ui.selectable_label(t.urls == m, tl!(name(m))).clicked() && t.urls != m {
+                    speech(app, json!({"text": {"urls": m.name()}}));
+                }
+            }
+        });
+    });
+    for (label, key, value) in [
+        ("Skip emoji", "skipEmoji", t.skip_emoji),
+        ("Skip symbols (arrows, boxes, bullets, icon characters)", "skipSymbols", t.skip_symbols),
+        ("Skip markup characters (* # _ ~ | ^ ` < > = \\)", "skipMarkup", t.skip_markup),
+        ("Skip text in [square brackets]", "skipBrackets", t.skip_brackets),
+        ("Skip text in (parentheses)", "skipParentheses", t.skip_parentheses),
+        ("Skip repeated punctuation (*****, -----)", "collapseRepeats", t.collapse_repeats),
+    ] {
+        let mut v = value;
+        if ui.checkbox(&mut v, tl!(label)).changed() {
+            speech(app, json!({"text": { key: v }}));
+        }
+    }
+    egui::Grid::new("read_aloud_text").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+        ui.label(tl!("Characters to skip:"));
+        if let Some(c) = speech_field(ui, "text.skipChars", &t.skip_chars, false, 320.0) {
+            speech(app, json!({"text": {"skipChars": c}}));
+        }
+        ui.end_row();
+        ui.label(tl!("Say instead (one per line, text = spoken as):"));
+        let current: Vec<String> = t.replacements.iter().map(|(f, to)| format!("{f} = {to}")).collect();
+        if let Some(text) = speech_field(ui, "text.replacements", &current.join("\n"), true, 320.0) {
+            let list: Vec<Value> = text
+                .lines()
+                .filter_map(|l| l.split_once(" = ").or_else(|| l.split_once('=')))
+                .filter(|(f, _)| !f.trim().is_empty())
+                .map(|(f, to)| json!({"from": f.trim(), "to": to.trim()}))
+                .collect();
+            speech(app, json!({"text": {"replacements": list}}));
+        }
+        ui.end_row();
+        ui.label(tl!("Skip text that matches (regular expressions, one per line):"));
+        if let Some(text) = speech_field(ui, "text.skipPatterns", &t.skip_patterns.join("\n"), true, 320.0) {
+            let list: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+            speech(app, json!({"text": {"skipPatterns": list}}));
+        }
+        ui.end_row();
+    });
+    note(ui, "The text on the page doesn't change. Only the spoken text does.");
+}
+
+/// Read Aloud › voice roles and the marker that switches them.
+fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
+    use wordcraft_engine::speech::Scope;
+    use wordcraft_engine::speech::settings::{MAX_ROLE_RATE, MAX_ROLES, MIN_ROLE_RATE};
+    let all = app.session.read_aloud.settings().to_json();
+    let v = app.session.read_aloud.settings().voices.clone();
+    section(ui, "Read Aloud: voices");
+    let mut enabled = v.enabled;
+    if ui.checkbox(&mut enabled, tl!("Change the voice where a marker character starts the text")).changed() {
+        speech(app, json!({"voices": {"enabled": enabled}}));
+    }
+    ui.add_enabled_ui(v.enabled, |ui| {
+        egui::Grid::new("read_aloud_marker").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+            ui.label(tl!("Marker character:"));
+            if let Some(m) = speech_field(ui, "voices.marker", &v.marker.to_string(), false, 40.0) {
+                speech(app, json!({"voices": {"marker": m}}));
+            }
+            ui.end_row();
+            ui.label(tl!("A marker changes the voice:"));
+            let name = |sc: Scope| match sc {
+                Scope::Paragraph => "To the end of the paragraph",
+                Scope::UntilNext => "Until the next marker",
+            };
+            egui::ComboBox::from_id_salt("read_aloud_scope").selected_text(tl!(name(v.scope))).width(220.0).show_ui(ui, |ui| {
+                for sc in [Scope::Paragraph, Scope::UntilNext] {
+                    if ui.selectable_label(v.scope == sc, tl!(name(sc))).clicked() && v.scope != sc {
+                        speech(app, json!({"voices": {"scope": sc.name()}}));
+                    }
+                }
+            });
+            ui.end_row();
+        });
+        note(ui, "Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.");
+        ui.add_space(4.0);
+        // Every role as `readAloud.settings` takes it: [narrator, role…].
+        let mut roles: Vec<Value> =
+            std::iter::once(all["voices"]["narrator"].clone()).chain(all["voices"]["roles"].as_array().cloned().unwrap_or_default()).collect();
+        let mut changed = false;
+        let mut remove = None;
+        egui::Grid::new("read_aloud_roles").num_columns(6).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+            for h in ["Label", "System voice", "Neural voice", "Cloud voice", "Speed", ""] {
+                ui.label(RichText::new(tl!(h)).small().weak());
+            }
+            ui.end_row();
+            for (i, role) in roles.iter_mut().enumerate() {
+                if i == 0 {
+                    ui.label(tl!("Narrator"));
+                } else if let Some(t) = speech_field(ui, &format!("role{i}.label"), role["label"].as_str().unwrap_or(""), false, 80.0) {
+                    role["label"] = json!(t.trim());
+                    changed = true;
+                }
+                for key in ["system", "local", "cloud"] {
+                    if let Some(t) = speech_field(ui, &format!("role{i}.{key}"), role[key].as_str().unwrap_or(""), false, 110.0) {
+                        role[key] = json!(t);
+                        changed = true;
+                    }
+                }
+                let mut rate = role["rate"].as_f64().unwrap_or(1.0) as f32;
+                if ui.add(egui::DragValue::new(&mut rate).range(MIN_ROLE_RATE..=MAX_ROLE_RATE).speed(0.01).fixed_decimals(2).suffix("×")).changed() {
+                    role["rate"] = json!(rate);
+                    changed = true;
+                }
+                if i > 0 && ui.small_button(tl!("Remove")).clicked() {
+                    remove = Some(i);
+                }
+                ui.end_row();
+            }
+        });
+        if let Some(i) = remove {
+            roles.remove(i);
+            changed = true;
+        }
+        if roles.len() <= MAX_ROLES && ui.button(tl!("Add a voice")).clicked() {
+            // The first free letter: A, B, C…
+            let used: Vec<String> = roles.iter().filter_map(|r| r["label"].as_str().map(str::to_lowercase)).collect();
+            if let Some(label) = ('A'..='Z').map(String::from).find(|l| !used.contains(&l.to_lowercase())) {
+                roles.push(json!({"label": label}));
+                changed = true;
+            }
+        }
+        if changed {
+            let narrator = roles.first().cloned().unwrap_or(Value::Null);
+            speech(app, json!({"voices": {"narrator": narrator, "roles": roles.get(1..).unwrap_or(&[])}}));
+        }
+        note(ui, "An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.");
+    });
 }
 
 fn advanced(app: &mut WordApp, ui: &mut Ui) {
@@ -1007,7 +1278,8 @@ mod tests {
         assert!(h.query_by_label("Animation effects:").is_some());
         assert!(h.query_by_label("Your system has animation effects turned off.").is_some());
         assert!(!h.state().animations_on());
-        h.get_by_role(egui::accesskit::Role::ComboBox).click();
+        // The first box of the pane (Read Aloud's come after it).
+        h.get_all_by_role(egui::accesskit::Role::ComboBox).next().unwrap().click();
         h.run_steps(4);
         h.get_by_label("On").click();
         h.run_steps(4);

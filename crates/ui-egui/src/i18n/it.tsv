@@ -968,6 +968,7 @@
 	Previous sentence	Frase precedente
 	Play/Pause	Riproduci/pausa
 	Read Aloud Status	Stato lettura ad alta voce
+	Read Aloud Settings	Impostazioni lettura ad alta voce
 	Reading Speed	Velocità di lettura
 	Skip Citations and Bibliography	Salta citazioni e bibliografia
 	Skip citations & bibliography	Salta citazioni e bibliografia
@@ -2708,3 +2709,40 @@ preview	Title	Esempio
 	Type a size in any unit, such as 5 cm or 300 px. The other side follows, so the picture keeps its proportions.	Scrivi una dimensione in qualsiasi unità, ad esempio 5 cm o 300 px. L'altro lato si adegua, così l'immagine mantiene le proporzioni.
 
 	Import…	Importa…
+	A marker changes the voice:	Un marcatore cambia la voce:
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Una voce naturale da un servizio vocale compatibile con OpenAI. Il testo letto viene inviato a quel servizio.
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Una voce naturale che funziona su questo computer. Installa prima Piper e un modello di voce.
+	Add a voice	Aggiungi una voce
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Una voce vuota usa la voce predefinita del motore. La velocità è relativa alla velocità di lettura.
+	Change the voice where a marker character starts the text	Cambia la voce dove un carattere marcatore inizia il testo
+	Characters to skip:	Caratteri da saltare:
+	Cloud voice	Voce cloud
+	Cloud voice (sends the text to a service)	Voce cloud (invia il testo a un servizio)
+	Label	Etichetta
+	Marker character:	Carattere marcatore:
+	Narrator	Narratore
+	Neural voice	Voce neurale
+	Neural voice on this computer (Piper)	Voce neurale su questo computer (Piper)
+	One paragraph	Un paragrafo
+	Read Aloud prepares and reads this much text, then goes on to the next part. A neural or cloud voice renders it ahead.	La lettura ad alta voce prepara e legge questa quantità di testo, poi passa alla parte successiva. Una voce neurale o cloud la prepara in anticipo.
+	Read Aloud: text	Lettura ad alta voce: testo
+	Read Aloud: voices	Lettura ad alta voce: voci
+	Read at a time:	Leggi alla volta:
+	Read the site name only	Leggi solo il nome del sito
+	Say instead (one per line, text = spoken as):	Pronuncia invece (uno per riga, testo = pronuncia):
+	Skip emoji	Salta le emoji
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	Salta i caratteri di markup (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Salta la punteggiatura ripetuta (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Salta i simboli (frecce, riquadri, punti elenco, caratteri di icone)
+	Skip text in (parentheses)	Salta il testo tra (parentesi)
+	Skip text in [square brackets]	Salta il testo tra [parentesi quadre]
+	Skip text that matches (regular expressions, one per line):	Salta il testo corrispondente (espressioni regolari, una per riga):
+	System voice	Voce di sistema
+	System voice (on this computer)	Voce di sistema (su questo computer)
+	The speech program of your operating system.	Il programma vocale del sistema operativo.
+	The text on the page doesn't change. Only the spoken text does.	Il testo della pagina non cambia. Cambia solo il testo pronunciato.
+	To the end of the paragraph	Fino alla fine del paragrafo
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Digita il marcatore e l'etichetta della voce prima del testo, ad esempio §A Ciao. Usa §N o §Narrator per tornare al narratore.
+	Voice:	Voce:
+	Voices and text settings…	Voci e impostazioni del testo…
+	Web addresses:	Indirizzi web:

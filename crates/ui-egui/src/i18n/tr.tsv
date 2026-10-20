@@ -907,6 +907,7 @@ preview	Title	Örnek
 	Previous sentence	Önceki cümle
 	Play/Pause	Oynat/Duraklat
 	Read Aloud Status	Sesli Okuma Durumu
+	Read Aloud Settings	Sesli Okuma Ayarları
 	Reading Speed	Okuma Hızı
 	Skip Citations and Bibliography	Atıfları ve Kaynakçayı Atla
 	Skip citations & bibliography	Atıfları ve kaynakçayı atla
@@ -2696,3 +2697,40 @@ preview	Title	Örnek
 	Type a size in any unit, such as 5 cm or 300 px. The other side follows, so the picture keeps its proportions.	Herhangi bir birimde bir boyut yazın, örneğin 5 cm veya 300 px. Diğer kenar da buna uyar, böylece resim oranlarını korur.
 
 	Import…	İçe aktar…
+	A marker changes the voice:	İşaretçi sesi değiştirir:
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	OpenAI uyumlu bir konuşma hizmetinden doğal bir ses. Okunan metin bu hizmete gönderilir.
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Bu bilgisayarda çalışan doğal bir ses. Önce Piper'ı ve bir ses modelini yükleyin.
+	Add a voice	Ses ekle
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Boş bir ses, motorun varsayılan sesini kullanır. Hız, okuma hızına görelidir.
+	Change the voice where a marker character starts the text	Metin bir işaretçi karakterle başladığında sesi değiştir
+	Characters to skip:	Atlanacak karakterler:
+	Cloud voice	Bulut sesi
+	Cloud voice (sends the text to a service)	Bulut sesi (metni bir hizmete gönderir)
+	Label	Etiket
+	Marker character:	İşaretçi karakter:
+	Narrator	Anlatıcı
+	Neural voice	Sinirsel ses
+	Neural voice on this computer (Piper)	Bu bilgisayarda sinirsel ses (Piper)
+	One paragraph	Bir paragraf
+	Read Aloud prepares and reads this much text, then goes on to the next part. A neural or cloud voice renders it ahead.	Sesli Okuma bu kadar metni hazırlar ve okur, sonra sonraki bölüme geçer. Sinirsel veya bulut sesi bunu önceden oluşturur.
+	Read Aloud: text	Sesli Okuma: metin
+	Read Aloud: voices	Sesli Okuma: sesler
+	Read at a time:	Bir seferde oku:
+	Read the site name only	Yalnızca site adını oku
+	Say instead (one per line, text = spoken as):	Bunun yerine söyle (satır başına bir tane, metin = söyleniş):
+	Skip emoji	Emojileri atla
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	İşaretleme karakterlerini atla (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Yinelenen noktalama işaretlerini atla (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Simgeleri atla (oklar, kutular, madde işaretleri, simge karakterleri)
+	Skip text in (parentheses)	(Parantez) içindeki metni atla
+	Skip text in [square brackets]	[Köşeli parantez] içindeki metni atla
+	Skip text that matches (regular expressions, one per line):	Eşleşen metni atla (düzenli ifadeler, satır başına bir tane):
+	System voice	Sistem sesi
+	System voice (on this computer)	Sistem sesi (bu bilgisayarda)
+	The speech program of your operating system.	İşletim sisteminizin konuşma programı.
+	The text on the page doesn't change. Only the spoken text does.	Sayfadaki metin değişmez. Yalnızca söylenen metin değişir.
+	To the end of the paragraph	Paragrafın sonuna kadar
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Metnin önüne işaretçiyi ve ses etiketini yazın, örneğin §A Merhaba. Anlatıcıya dönmek için §N veya §Narrator kullanın.
+	Voice:	Ses:
+	Voices and text settings…	Sesler ve metin ayarları…
+	Web addresses:	Web adresleri:
