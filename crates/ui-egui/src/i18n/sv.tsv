@@ -1065,6 +1065,7 @@
 	Play/Pause	Spela upp/pausa
 	Read Aloud Status	Status för uppläsning
 	Read Aloud Settings	Inställningar för uppläsning
+	Read Aloud Voices	Röster för uppläsning
 	Reading Speed	Läshastighet
 	Skip Citations and Bibliography	Hoppa över källhänvisningar och källförteckning
 	Skip citations & bibliography	Hoppa över källhänvisningar och källförteckning
@@ -2750,3 +2751,18 @@ preview	Title	Titel
 	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	En tom röst använder motorns standardröst. Hastigheten är relativ till läshastigheten.
 	Voice:	Röst:
 	Until the next marker	Till nästa markör
+	System voice (on this computer)	Systemröst (på den här datorn)
+	The speech program of your operating system.	Operativsystemets talprogram.
+	Neural voice on this computer (Piper)	Neural röst på den här datorn (Piper)
+	A natural voice that runs on this computer. Install Piper and a voice model first.	En naturlig röst som körs på den här datorn. Installera Piper och en röstmodell först.
+	Neural voice	Neural röst
+	Default voice	Standardröst
+	No voices found	Inga röster hittades
+	Pick a voice	Välj en röst
+	Find voices again	Sök röster igen
+	Ask the speech program and the voice folders for their voices again	Fråga talprogrammet och röstmapparna efter röster igen
+	A neural voice renders this text ahead.	En neural röst renderar texten i förväg.
+	Program:	Program:
+	Voice model:	Röstmodell:
+	Arguments (one per line):	Argument (ett per rad):
+	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Röstmodellen är sökvägen till en Piper .onnx-fil. I argumenten fylls {voice}, {output}, {rate} och {lengthScale} i för varje mening.

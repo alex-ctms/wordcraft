@@ -974,6 +974,7 @@
 	Play/Pause	Phát/Tạm dừng
 	Read Aloud Status	Trạng thái đọc to
 	Read Aloud Settings	Cài đặt đọc to
+	Read Aloud Voices	Giọng đọc to
 	Reading Speed	Tốc độ đọc
 	Skip Citations and Bibliography	Bỏ qua trích dẫn và danh mục tham khảo
 	Skip citations & bibliography	Bỏ qua trích dẫn và danh mục tham khảo
@@ -2775,3 +2776,18 @@ template	Letter	Thư
 	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Giọng để trống sẽ dùng giọng mặc định của bộ máy. Tốc độ tính theo tốc độ đọc.
 	Voice:	Giọng:
 	Until the next marker	Đến dấu đánh dấu tiếp theo
+	System voice (on this computer)	Giọng hệ thống (trên máy tính này)
+	The speech program of your operating system.	Chương trình giọng nói của hệ điều hành.
+	Neural voice on this computer (Piper)	Giọng nơ-ron trên máy tính này (Piper)
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Giọng tự nhiên chạy trên máy tính này. Hãy cài Piper và một mô hình giọng trước.
+	Neural voice	Giọng nơ-ron
+	Default voice	Giọng mặc định
+	No voices found	Không tìm thấy giọng
+	Pick a voice	Chọn một giọng
+	Find voices again	Tìm lại giọng
+	Ask the speech program and the voice folders for their voices again	Hỏi lại chương trình giọng nói và các thư mục giọng
+	A neural voice renders this text ahead.	Giọng nơ-ron tạo âm thanh cho văn bản này trước.
+	Program:	Chương trình:
+	Voice model:	Mô hình giọng:
+	Arguments (one per line):	Đối số (mỗi dòng một mục):
+	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Mô hình giọng là đường dẫn tới tệp Piper .onnx. Trong các đối số, {voice}, {output}, {rate} và {lengthScale} được điền cho từng câu.

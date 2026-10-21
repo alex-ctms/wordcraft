@@ -911,6 +911,7 @@
 	Read Aloud	Číst nahlas
 	Read Aloud Status	Stav čtení nahlas
 	Read Aloud Settings	Nastavení čtení nahlas
+	Read Aloud Voices	Hlasy čtení nahlas
 	Read Mode	Režim čtení
 	Read\nAloud	Číst\nnahlas
 	Read\nMode	Režim\nčtení
@@ -2727,3 +2728,18 @@ preview	Title	Ukázka
 	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Prázdný hlas použije výchozí hlas modulu. Rychlost je vzhledem k rychlosti čtení.
 	Voice:	Hlas:
 	Until the next marker	Do další značky
+	System voice (on this computer)	Systémový hlas (na tomto počítači)
+	The speech program of your operating system.	Program pro řeč vašeho operačního systému.
+	Neural voice on this computer (Piper)	Neuronový hlas na tomto počítači (Piper)
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Přirozený hlas, který běží na tomto počítači. Nejprve nainstalujte Piper a model hlasu.
+	Neural voice	Neuronový hlas
+	Default voice	Výchozí hlas
+	No voices found	Nenalezeny žádné hlasy
+	Pick a voice	Vyberte hlas
+	Find voices again	Znovu najít hlasy
+	Ask the speech program and the voice folders for their voices again	Znovu zjistit hlasy z programu pro řeč a ze složek s hlasy
+	A neural voice renders this text ahead.	Neuronový hlas tento text vytvoří předem.
+	Program:	Program:
+	Voice model:	Model hlasu:
+	Arguments (one per line):	Argumenty (jeden na řádek):
+	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Model hlasu je cesta k souboru Piper .onnx. V argumentech se {voice}, {output}, {rate} a {lengthScale} vyplní pro každou větu.

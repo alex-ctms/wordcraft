@@ -1,16 +1,64 @@
 # Read Aloud
 
-> **Last updated:** 2026-10-20 · **Change:** minor (voice roles; previously minor: text rules; previously minor: first version: how much Read Aloud reads at one time)
+> **Last updated:** 2026-10-20 · **Change:** minor (neural voice on this computer, voice lists; previously minor: voice roles; previously minor: text rules; previously minor: first version: how much Read Aloud reads at one time)
 
 Read Aloud reads the document to you. It highlights the sentence that it reads, and the caret
 follows that sentence.
-This page tells you how to choose how much text Read Aloud reads at one time.
+This page tells you how to choose the voice and how much text Read Aloud reads at one time.
 It also tells you what Read Aloud skips.
 It also tells you how to give parts of the text to different voices.
 
 All the settings are in **File › Options › Accessibility › Read Aloud**. The Read Aloud player
 also has a link to them. Agents, the CLI and MCP use the `readAloud.settings` command. WordCraft
 keeps the settings in `ui.json`.
+
+## Voice engines
+
+Read Aloud has two voice engines. Select one engine.
+
+| Engine | Setting | Where the speech is made | What you must install |
+|---|---|---|---|
+| System voice | `"engine": "system"` | On this computer | Nothing on macOS and Windows. On Linux and BSD, install `espeak-ng`. |
+| Neural voice (Piper) | `"engine": "local"` | On this computer | Piper and one Piper voice model (`.onnx`). |
+
+The system voice is the default. The neural voice sounds more natural.
+
+### Set up the neural voice (Piper)
+
+1. Install Piper. Make sure that the `piper` program is on your `PATH`.
+2. Download a Piper voice model. A model is an `.onnx` file and a `.onnx.json` file.
+3. Open **File › Options › Accessibility**.
+4. Select **Neural voice on this computer (Piper)**.
+5. In **Voice model**, select the model from the list. If the model is not in the list, select
+   **Browse…** in the list, or type the full path of the `.onnx` file.
+
+The list shows the `.onnx` files in the folders of the models that you use, and in the usual
+download folders (for example `~/.local/share/piper-voices`). Piper 1.8 installs with
+`uv tool install piper-tts`. Its `python -m piper.download_voices` command downloads models.
+
+Read Aloud gives the sentence to the program on stdin. The program writes a WAV file. The
+default arguments are:
+
+```
+--model {voice} --output_file {output} --length_scale {lengthScale}
+```
+
+You can use a different program, for example a script that starts a different neural voice.
+Change **Program** and **Arguments** in File › Options. Read Aloud fills in these fields for
+each sentence:
+
+| Field | Value |
+|---|---|
+| `{voice}` | The voice of the role, or else the default voice model |
+| `{output}` | The WAV file that the program must write |
+| `{rate}` | The speed, for example `1.25` |
+| `{lengthScale}` | The length of the speech, `1 / speed` (Piper uses this) |
+
+### When a voice fails
+
+If the neural voice cannot make a sentence, the system voice reads that sentence. The player
+shows the reason, for example a missing program or a missing voice model. Read Aloud stops only
+if the system voice also fails.
 
 ## How much Read Aloud reads at one time
 
@@ -21,6 +69,8 @@ Set **Read at a time** (`"chunk"`):
 - **One page** (`page`). Read Aloud prepares the paragraphs that start on one page.
 - **The whole document** (`document`). Read Aloud prepares all the sentences at the start.
 
+The neural voice renders all the sentences of the paragraph or page before the player gets to
+them. With the whole document, it renders three sentences ahead.
 The player shows the paragraph or page that it reads, for example "Paragraph 3 / 40".
 
 **Next sentence** and **Previous sentence** go across paragraphs and pages.
@@ -82,9 +132,14 @@ Rules for markers:
 To set the roles, use the table in **File › Options › Accessibility › Read Aloud: voices**:
 
 - **Label**: the text after the marker. Use letters, digits and `_`, 24 characters maximum.
-- **System voice**: the voice of the role. Type a voice name (macOS: `say -v '?'` lists them;
-  Linux and BSD: `espeak-ng --voices`; Windows: the installed voices). An empty field uses the
-  default voice.
+- **System voice**, **Neural voice**: the voice for each engine. Select a voice from the list
+  next to the field, or type a voice name or a path in the field.
+  - The system list shows the voices of the speech program (`say -v '?'` on macOS,
+    `espeak-ng --voices` on Linux and BSD, the installed voices on Windows).
+  - The neural list shows the Piper models that WordCraft finds. Select **Browse…** to select a
+    model file in a different folder.
+  - **Default voice** clears the field. An empty field uses the default voice of the engine.
+- Select **Find voices again** after you install a voice.
 - **Speed**: the speed of the role, relative to the reading speed (0.5× to 2×).
 
 Use **Add a voice** to add a role. You can have 26 roles and the Narrator. To use a different
@@ -103,8 +158,15 @@ wordcraft-cli run --template sample \
   --cmd review.readAloud
 ```
 
-`readAloud.status` also returns `chunk`, `chunkIndex`, `chunkCount` and `voice` (the role label of
-the sentence that Read Aloud reads).
+For safety, `readAloud.settings` cannot change `local.program` or `local.args`. These settings
+choose the program that WordCraft runs. Change them in **File › Options › Accessibility**. The
+command accepts the same values that it returned, so an agent can send the settings back.
+
+`readAloud.voices` returns the voices in the lists: `system` and `local`, each a list of
+`{"id", "label"}`. With `{"refresh": true}`, it asks the speech program again.
+
+`readAloud.status` also returns `engine`, `chunk`, `chunkIndex`, `chunkCount` and `voice` (the role
+label of the sentence that Read Aloud reads).
 
 ## Future work
 
@@ -129,6 +191,7 @@ These items are not in WordCraft yet:
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-20 | minor | Neural voice on this computer (Piper or another program), voice lists, `readAloud.voices`; a command can't change the program |
 | 2026-10-20 | minor | Voice roles with a marker character |
 | 2026-10-20 | minor | Text rules |
 | 2026-10-20 | minor | First version: one paragraph, one page or the whole document at a time |

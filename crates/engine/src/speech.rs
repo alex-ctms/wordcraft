@@ -17,6 +17,11 @@
 //! sentence, and moves on when it finishes. Commands only change the shared state and wake the
 //! worker, which stops the running sentence when the state changed under it.
 //!
+//! With a neural voice ([`Engine::Local`], see [`neural`]) a second thread renders the sentences
+//! of the current paragraph or page to WAV files ahead of the player, and the player plays them.
+//! A sentence that can't be rendered is read by the system voice, so a missing program never
+//! means silence.
+//!
 //! The document is read one chunk at a time ([`Chunk`]: a paragraph, a page or all of it): the
 //! queue holds the sentences of the current chunk only, and the next chunk is loaded when the
 //! player gets to the end of it.
@@ -30,10 +35,11 @@ use wordcraft_doc::para::{COLUMN_BREAK, LINE_BREAK, OBJ, PAGE_BREAK};
 use wordcraft_doc::{Document, InlineObject, Path, Pos, StoryRef};
 
 pub mod clean;
+pub(crate) mod neural;
 pub mod settings;
 pub mod voices;
 
-pub use settings::{Chunk, Scope, SpeechSettings, TextRules, UrlMode, Voices};
+pub use settings::{Chunk, Engine, Scope, SpeechSettings, TextRules, UrlMode, Voices};
 
 /// Longest sentence handed to the speech program (longer ones are split at a space).
 const MAX_SENTENCE: usize = 600;
@@ -669,6 +675,14 @@ pub enum Backend {
     Instant,
 }
 
+/// A sentence rendered by a neural voice: its WAV file, or why it couldn't be rendered.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Debug)]
+enum Clip {
+    Ready(std::path::PathBuf),
+    Failed(String),
+}
+
 /// What a reading reads: the document as it was when reading started, and the reading's plan.
 struct Source {
     doc: Arc<Document>,
@@ -692,11 +706,31 @@ struct Shared {
     /// `None` for a fixed queue ([`ReadAloud::start`]): one chunk.
     source: Option<Source>,
     chunk: usize,
+    /// Bumped whenever rendered audio no longer fits: a new queue, speed or voice.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    epoch: u64,
+    /// Rendered sentences of the queue, by index.
+    #[cfg(not(target_arch = "wasm32"))]
+    clips: std::collections::HashMap<usize, Clip>,
+    /// A renderer thread is running.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    rendering: bool,
 }
 
 impl Shared {
     fn chunks(&self) -> usize {
         self.source.as_ref().map_or(1, |s| s.plan.chunks())
+    }
+
+    /// Throw rendered audio away (and its files).
+    fn drop_audio(&mut self) {
+        self.epoch = self.epoch.wrapping_add(1);
+        #[cfg(not(target_arch = "wasm32"))]
+        for (_, c) in self.clips.drain() {
+            if let Clip::Ready(p) = c {
+                neural::remove(p);
+            }
+        }
     }
 
     /// Load the first chunk from `c` on that has something to read, going forwards (or
@@ -725,7 +759,14 @@ impl Shared {
         self.index = if forward { 0 } else { q.len().saturating_sub(1) };
         self.queue = q;
         self.chunk = at;
+        self.drop_audio();
         true
+    }
+}
+
+impl Drop for Shared {
+    fn drop(&mut self) {
+        self.drop_audio();
     }
 }
 
@@ -757,6 +798,10 @@ impl Default for ReadAloud {
                     settings: Arc::new(settings.clone()),
                     source: None,
                     chunk: 0,
+                    epoch: 0,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    clips: Default::default(),
+                    rendering: false,
                 }),
                 Condvar::new(),
             )),
@@ -795,6 +840,7 @@ impl ReadAloud {
             s.error = None;
             s.source = None;
             s.chunk = 0;
+            s.drop_audio();
         });
     }
 
@@ -861,9 +907,16 @@ impl ReadAloud {
         let r = if rate.is_finite() { rate.clamp(MIN_RATE, MAX_RATE) } else { 1.0 };
         let playing = self.state() == State::Playing;
         if playing {
-            self.change(|s| s.rate = r);
+            self.change(|s| {
+                s.rate = r;
+                s.drop_audio();
+            });
         } else {
-            lock(&self.shared.0).rate = r;
+            let mut s = lock(&self.shared.0);
+            if s.rate != r {
+                s.rate = r;
+                s.drop_audio();
+            }
         }
     }
 
@@ -876,7 +929,10 @@ impl ReadAloud {
     pub fn set_settings(&mut self, settings: SpeechSettings) {
         self.settings = settings.clone();
         let reading = self.state() != State::Stopped;
-        let apply = |s: &mut Shared| s.settings = Arc::new(settings);
+        let apply = |s: &mut Shared| {
+            s.settings = Arc::new(settings);
+            s.drop_audio();
+        };
         if reading {
             self.change(apply);
         } else {
@@ -887,7 +943,10 @@ impl ReadAloud {
     /// Stop reading and close the player.
     pub fn stop(&mut self) {
         self.open = false;
-        self.change(|s| s.state = State::Stopped);
+        self.change(|s| {
+            s.state = State::Stopped;
+            s.drop_audio();
+        });
     }
 
     pub fn state(&self) -> State {
@@ -935,6 +994,7 @@ impl ReadAloud {
             "chunk": s.settings.chunk.name(),
             "chunkIndex": s.chunk,
             "chunkCount": s.chunks(),
+            "engine": s.settings.engine.name(),
             "rate": s.rate,
             "skipCitations": self.skip_citations,
             "current": current.map(Utterance::to_json),
@@ -967,6 +1027,16 @@ impl ReadAloud {
                 s.running = false;
                 s.state = State::Stopped;
                 s.error = Some(format!("couldn't start Read Aloud: {e}"));
+                return;
+            }
+        }
+        if self.backend == Backend::System && s.settings.engine != Engine::System && !s.rendering {
+            s.rendering = true;
+            let shared = Arc::clone(&self.shared);
+            if let Err(e) = std::thread::Builder::new().name("read-aloud-render".into()).spawn(move || renderer(&shared)) {
+                // The player waits for audio that won't come: the system voice reads instead.
+                s.rendering = false;
+                s.error = Some(format!("couldn't start the neural voice: {e}"));
             }
         }
     }
@@ -1000,7 +1070,7 @@ fn role_rate(rate: f32, role: f32) -> f32 {
 fn worker(shared: &(Mutex<Shared>, Condvar), backend: Backend) {
     let (m, cv) = shared;
     loop {
-        let (u, generation, rate, settings) = {
+        let (u, index, generation, rate, settings) = {
             let mut s = lock(m);
             while s.state == State::Paused {
                 s = cv.wait(s).unwrap_or_else(PoisonError::into_inner);
@@ -1010,7 +1080,7 @@ fn worker(shared: &(Mutex<Shared>, Condvar), backend: Backend) {
                 return;
             }
             match s.queue.get(s.index) {
-                Some(u) => (u.clone(), s.generation, s.rate, Arc::clone(&s.settings)),
+                Some(u) => (u.clone(), s.index, s.generation, s.rate, Arc::clone(&s.settings)),
                 None => {
                     s.state = State::Stopped;
                     s.running = false;
@@ -1023,7 +1093,8 @@ fn worker(shared: &(Mutex<Shared>, Condvar), backend: Backend) {
         let rate = role_rate(rate, factor);
         let voice = Some(voice).filter(|v| !v.is_empty());
         let outcome = match backend {
-            Backend::System => speak(&u.text, u.lang.as_deref(), voice, rate, &changed),
+            Backend::System if settings.engine == Engine::System => speak(&u.text, u.lang.as_deref(), voice, rate, &changed),
+            Backend::System => play_rendered(shared, index, generation, &u, rate, &changed),
             Backend::Instant => Spoken::Done,
             Backend::Hold => {
                 let mut s = lock(m);
@@ -1042,7 +1113,10 @@ fn worker(shared: &(Mutex<Shared>, Condvar), backend: Backend) {
                 s.index += 1;
                 if s.index >= s.queue.len() {
                     let next = s.chunk.saturating_add(1);
-                    if !s.load(next, true) {
+                    if s.load(next, true) {
+                        // The renderer starts on the new chunk.
+                        cv.notify_all();
+                    } else {
                         s.state = State::Stopped;
                         s.running = false;
                         return;
@@ -1060,10 +1134,131 @@ fn worker(shared: &(Mutex<Shared>, Condvar), backend: Backend) {
     }
 }
 
+/// Play sentence `index` when the renderer has it. A sentence that couldn't be rendered, or
+/// played, is read by the system voice, and the error says why.
+#[cfg(not(target_arch = "wasm32"))]
+fn play_rendered(shared: &(Mutex<Shared>, Condvar), index: usize, generation: u64, u: &Utterance, rate: f32, changed: &dyn Fn() -> bool) -> Spoken {
+    let (m, cv) = shared;
+    let clip = {
+        let mut s = lock(m);
+        loop {
+            if s.generation != generation {
+                return Spoken::Interrupted;
+            }
+            if let Some(c) = s.clips.get(&index) {
+                break c.clone();
+            }
+            if !s.rendering {
+                break Clip::Failed("the neural voice stopped".into());
+            }
+            s = cv.wait(s).unwrap_or_else(PoisonError::into_inner);
+        }
+    };
+    let failed = match clip {
+        Clip::Ready(path) => match neural::play(&path, changed) {
+            neural::Ran::Exited(_) => return Spoken::Done,
+            neural::Ran::Interrupted => return Spoken::Interrupted,
+            neural::Ran::NotStarted(e) => e,
+        },
+        Clip::Failed(e) => e,
+    };
+    let note = format!("{failed}. The system voice reads instead.");
+    {
+        let mut s = lock(m);
+        if s.error.as_deref() != Some(note.as_str()) {
+            s.error = Some(note);
+        }
+    }
+    speak(&u.text, u.lang.as_deref(), None, rate, changed)
+}
+
+/// Render the sentences of the current chunk ahead of the player, one at a time, until reading
+/// stops or the engine is the system voice again.
+#[cfg(not(target_arch = "wasm32"))]
+fn renderer(shared: &(Mutex<Shared>, Condvar)) {
+    let (m, cv) = shared;
+    loop {
+        let (index, u, epoch, settings, rate) = {
+            let mut s = lock(m);
+            loop {
+                if s.state == State::Stopped || s.settings.engine == Engine::System {
+                    s.rendering = false;
+                    cv.notify_all();
+                    return;
+                }
+                // The whole paragraph or page is rendered ahead; a whole document only a few
+                // sentences ahead.
+                let ahead = if s.settings.chunk == Chunk::Document { RENDER_AHEAD } else { usize::MAX };
+                let end = s.queue.len().min(s.index.saturating_add(ahead).saturating_add(1));
+                if let Some(i) = (s.index..end).find(|i| !s.clips.contains_key(i))
+                    && let Some(u) = s.queue.get(i)
+                {
+                    break (i, u.clone(), s.epoch, Arc::clone(&s.settings), s.rate);
+                }
+                s = cv.wait(s).unwrap_or_else(PoisonError::into_inner);
+            }
+        };
+        let changed = || {
+            let s = lock(m);
+            s.epoch != epoch || s.state == State::Stopped
+        };
+        let (voice, factor) = settings.role_voice(u.role);
+        let Some(clip) = render(&settings, voice, role_rate(rate, factor), &u.text, &changed) else { continue };
+        let mut s = lock(m);
+        if s.epoch != epoch {
+            if let Clip::Ready(p) = clip {
+                neural::remove(p);
+            }
+            continue;
+        }
+        // Sentences well behind the player are not kept.
+        let behind = s.index.saturating_sub(2);
+        let old: Vec<usize> = s.clips.keys().copied().filter(|k| *k < behind).collect();
+        for k in old {
+            if let Some(Clip::Ready(p)) = s.clips.remove(&k) {
+                neural::remove(p);
+            }
+        }
+        s.clips.insert(index, clip);
+        cv.notify_all();
+    }
+}
+
+/// Sentences rendered ahead of the player when the chunk is the whole document.
+#[cfg(not(target_arch = "wasm32"))]
+const RENDER_AHEAD: usize = 3;
+
+/// Render `text` with the neural voice of `settings`: `None` when interrupted.
+#[cfg(not(target_arch = "wasm32"))]
+fn render(settings: &SpeechSettings, voice: &str, rate: f32, text: &str, changed: &dyn Fn() -> bool) -> Option<Clip> {
+    use neural::Ran;
+    let out = neural::temp_file("wav");
+    let result = match settings.engine {
+        Engine::System => return None,
+        Engine::Local => match neural::local_run(&settings.local, voice, rate, &out, text) {
+            Err(e) => Err(e),
+            Ok(r) => match neural::run(&r, changed) {
+                Ran::Exited(true) if neural::has_audio(&out) => Ok(()),
+                Ran::Exited(_) => Err(format!("the local voice program `{}` failed (check its voice model)", settings.local.program)),
+                Ran::Interrupted => Err(String::new()),
+                Ran::NotStarted(e) => {
+                    Err(format!("couldn't start the local voice program `{}` ({e}); install Piper or set the program", settings.local.program))
+                }
+            },
+        },
+    };
+    match result {
+        Ok(()) => Some(Clip::Ready(out)),
+        Err(e) => {
+            neural::remove(&out);
+            (!e.is_empty()).then_some(Clip::Failed(e))
+        }
+    }
+}
+
 /// Windows PowerShell by its full path, `<SystemRoot>\System32\WindowsPowerShell\v1.0\powershell.exe`
 /// (`C:\Windows` when `SystemRoot` is unset), rather than whichever `powershell` the program search
 /// finds first.
-#[cfg(any(target_os = "windows", test))]
 fn windows_powershell(system_root: Option<std::ffi::OsString>) -> std::path::PathBuf {
     let root = system_root.filter(|r| !r.is_empty()).unwrap_or_else(|| "C:\\Windows".into());
     std::path::Path::new(&root).join("System32").join("WindowsPowerShell").join("v1.0").join("powershell.exe")

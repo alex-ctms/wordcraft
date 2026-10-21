@@ -908,6 +908,7 @@ preview	Title	Örnek
 	Play/Pause	Oynat/Duraklat
 	Read Aloud Status	Sesli Okuma Durumu
 	Read Aloud Settings	Sesli Okuma Ayarları
+	Read Aloud Voices	Sesli Okuma Sesleri
 	Reading Speed	Okuma Hızı
 	Skip Citations and Bibliography	Atıfları ve Kaynakçayı Atla
 	Skip citations & bibliography	Atıfları ve kaynakçayı atla
@@ -2732,3 +2733,18 @@ preview	Title	Örnek
 	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Boş bir ses, motorun varsayılan sesini kullanır. Hız, okuma hızına görelidir.
 	Voice:	Ses:
 	Until the next marker	Sonraki işaretçiye kadar
+	System voice (on this computer)	Sistem sesi (bu bilgisayarda)
+	The speech program of your operating system.	İşletim sisteminizin konuşma programı.
+	Neural voice on this computer (Piper)	Bu bilgisayarda sinirsel ses (Piper)
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Bu bilgisayarda çalışan doğal bir ses. Önce Piper'ı ve bir ses modelini yükleyin.
+	Neural voice	Sinirsel ses
+	Default voice	Varsayılan ses
+	No voices found	Ses bulunamadı
+	Pick a voice	Bir ses seçin
+	Find voices again	Sesleri yeniden bul
+	Ask the speech program and the voice folders for their voices again	Sesleri konuşma programından ve ses klasörlerinden yeniden iste
+	A neural voice renders this text ahead.	Sinirsel ses bu metni önceden oluşturur.
+	Program:	Program:
+	Voice model:	Ses modeli:
+	Arguments (one per line):	Bağımsız değişkenler (satır başına bir tane):
+	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Ses modeli, bir Piper .onnx dosyasının yoludur. Bağımsız değişkenlerde {voice}, {output}, {rate} ve {lengthScale} her cümle için doldurulur.

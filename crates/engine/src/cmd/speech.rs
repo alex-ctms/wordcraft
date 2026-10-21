@@ -28,6 +28,9 @@ pub fn specs() -> Vec<CommandSpec> {
             .params(r#"{"value"?: bool}"#)
             .pure(),
         CommandSpec::new("readAloud.settings", "Read Aloud Settings", "Review › Speech", settings).params(SETTINGS_PARAMS).pure(),
+        CommandSpec::new("readAloud.voices", "Read Aloud Voices", "Review › Speech", voices)
+            .params(r#"{"refresh"?: bool (ask the speech program again)} — the voices to pick from: {"system": [{"id", "label"}] (the system speech program's), "local": [...] (Piper .onnx models in the folders of the models in use and the usual download folders)}; the settings also take any other name or path"#)
+            .pure(),
         CommandSpec::new("readAloud.status", "Read Aloud Status", "Review › Speech", status).pure(),
         CommandSpec::new("caret.pastCitation", "Move Past Citation", "Zotero › Citations", past_citation).pure(),
     ]
@@ -35,11 +38,14 @@ pub fn specs() -> Vec<CommandSpec> {
 
 const SETTINGS_PARAMS: &str = concat!(
     "{",
-    r#""chunk"?: "paragraph|page|document" (read one paragraph, one page or all of it at a time)"#,
+    r#""engine"?: "system|local" (local: Piper or another program that writes a WAV file), "#,
+    r#""chunk"?: "paragraph|page|document" (read and render one paragraph, one page or all of it at a time)"#,
+    r#", "local"?: {"program"?: string, "args"?: [string] ({voice} {output} {rate} {lengthScale} are filled in), "voice"?: string (Piper: the .onnx model)}"#,
     r#", "text"?: {"urls"?: "read|domain|skip", "skipEmoji"?: bool, "skipSymbols"?: bool, "skipMarkup"?: bool, "skipBrackets"?: bool, "skipParentheses"?: bool, "collapseRepeats"?: bool, "skipChars"?: string, "replacements"?: [{"from": string, "to": string}], "skipPatterns"?: [regex]}"#,
     r#", "voices"?: {"enabled"?: bool, "marker"?: one character (default §; "§A Hello." is read by Voice A), "scope"?: "paragraph|untilNext", "#,
-    r#""narrator"?: {"system"?: voice, "rate"?: 0.5…2}, "roles"?: [{"label": string, "system"?: voice, "rate"?: 0.5…2}]}"#,
+    r#""narrator"?: {"system"?, "local"?: voice, "rate"?: 0.5…2}, "roles"?: [{"label": string, "system"?, "local"?: voice, "rate"?: 0.5…2}]}"#,
     "} — changes the named settings (a bad value changes nothing) and returns them all; a reading in progress carries on from the same sentence.",
+    " `local.program` and `local.args` can't be changed: only the user can, in File › Options › Accessibility.",
 );
 
 /// Start reading from the caret (or the selection); while reading, pause or carry on.
@@ -140,6 +146,19 @@ fn skip_citations(s: &mut Session, v: &Value) -> CmdResult {
         restart(s);
     }
     status(s, v)
+}
+
+/// The voices each engine can use, for the settings' lists.
+fn voices(s: &mut Session, v: &Value) -> CmdResult {
+    use crate::speech::neural::{self, VoiceChoice};
+    let set = s.read_aloud.settings();
+    let mut known: Vec<&str> = vec![set.local.voice.as_str()];
+    known.extend(set.voices.roles.iter().map(|r| r.local.as_str()));
+    let list = |v: Vec<VoiceChoice>| v.iter().map(VoiceChoice::to_json).collect::<Vec<_>>();
+    Ok(serde_json::json!({
+        "system": list(neural::system_voices(p::bool(v, "refresh").unwrap_or(false))),
+        "local": list(neural::piper_models(&neural::piper_dirs(&known))),
+    }))
 }
 
 fn status(s: &mut Session, _: &Value) -> CmdResult {
@@ -391,6 +410,21 @@ mod tests {
         assert_eq!(s.read_aloud.settings().chunk, crate::speech::Chunk::Page);
         let r = s.run("readAloud.settings", &json!({"text": {"skipEmoji": true}})).unwrap();
         assert_eq!(r["text"]["skipEmoji"], true);
+        let r = s.run("readAloud.settings", &json!({"engine": "local"})).unwrap();
+        assert_eq!(r["engine"], "local");
+        assert_eq!(s.run("readAloud.status", &json!({})).unwrap()["engine"], "local");
+        assert!(s.run("readAloud.settings", &json!({"engine": "system", "voices": {"marker": "xy"}})).is_err());
+        assert_eq!(s.read_aloud.settings().engine, crate::speech::Engine::Local);
+        // A command can't choose the program WordCraft runs.
+        assert!(s.run("readAloud.settings", &json!({"local": {"program": "/bin/sh"}})).is_err());
+        assert_eq!(s.read_aloud.settings().local.program, "piper");
+    }
+
+    #[test]
+    fn voice_lists_for_every_engine() {
+        let mut s = Session::new(Document::from_text("x"));
+        let r = s.run("readAloud.voices", &json!({"refresh": true})).unwrap();
+        assert!(r["system"].is_array() && r["local"].is_array());
     }
 
     #[test]

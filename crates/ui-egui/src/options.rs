@@ -451,6 +451,7 @@ fn accessibility(app: &mut WordApp, ui: &mut Ui) {
     if ui.checkbox(&mut skip, tl!("Skip citations & bibliography")).changed() {
         let _ = app.run("readAloud.skipCitations", json!({"value": skip}));
     }
+    read_aloud_engine(app, ui);
     read_aloud_chunk(app, ui);
     ui.add_space(8.0);
     read_aloud_text(app, ui);
@@ -462,6 +463,17 @@ fn accessibility(app: &mut WordApp, ui: &mut Ui) {
 fn speech(app: &mut WordApp, params: Value) {
     if let Err(e) = app.run("readAloud.settings", params) {
         app.status(e);
+    }
+}
+
+/// Change Read Aloud settings that only the user may change: the program WordCraft runs. Commands
+/// can't ([`wordcraft_engine::speech::settings::Origin`]), so the pane changes them directly.
+fn speech_user(app: &mut WordApp, params: Value) {
+    use wordcraft_engine::speech::settings::Origin;
+    let mut next = app.session.read_aloud.settings().clone();
+    match next.apply_from(&params, Origin::User) {
+        Ok(()) => app.session.read_aloud.set_settings(next),
+        Err(e) => app.status(e.to_string()),
     }
 }
 
@@ -479,6 +491,115 @@ fn speech_field(ui: &mut Ui, id: &str, current: &str, multiline: bool, width: f3
     } else {
         ui.data_mut(|d| d.remove::<String>(id));
         (r.lost_focus() && text != current).then_some(text)
+    }
+}
+
+/// What a voice field asks for.
+enum VoicePick {
+    /// Use this voice (empty: the engine's default).
+    Set(String),
+    /// Pick a model file.
+    Browse,
+}
+
+/// The voices `readAloud.voices` found for `engine` (`system`, `local`), as (id, label). The list
+/// is asked for once, when the pane first shows.
+fn voice_choices(app: &mut WordApp, engine: &str) -> Vec<(String, String)> {
+    if app.read_aloud_voices.is_none() {
+        app.read_aloud_voices = Some(app.run("readAloud.voices", json!({})).unwrap_or_default());
+    }
+    let list = app.read_aloud_voices.as_ref().and_then(|v| v.get(engine)).and_then(Value::as_array).cloned().unwrap_or_default();
+    list.iter().filter_map(|c| Some((c["id"].as_str()?.to_string(), c["label"].as_str()?.to_string()))).collect()
+}
+
+/// A voice field: type any voice name or path, or pick one of the `choices` found from the list
+/// next to it. With `browse`, the list also offers to pick a model file.
+fn voice_field(ui: &mut Ui, id: &str, current: &str, choices: &[(String, String)], width: f32, browse: bool) -> Option<VoicePick> {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 2.0;
+        let mut out = speech_field(ui, id, current, false, width).map(VoicePick::Set);
+        let shown = choices.iter().find(|(c, _)| c == current).map(|(_, l)| l.clone());
+        let r = egui::ComboBox::from_id_salt(("read-aloud-voices", id)).width(18.0).selected_text("").show_ui(ui, |ui| {
+            ui.set_min_width(280.0);
+            if ui.selectable_label(current.is_empty(), tl!("Default voice")).clicked() {
+                out = Some(VoicePick::Set(String::new()));
+            }
+            if choices.is_empty() {
+                ui.label(RichText::new(tl!("No voices found")).weak());
+            }
+            for (c, label) in choices {
+                if ui.selectable_label(c == current, label).clicked() {
+                    out = Some(VoicePick::Set(c.clone()));
+                }
+            }
+            if browse {
+                ui.separator();
+                if ui.selectable_label(false, tl!("Browse…")).clicked() {
+                    out = Some(VoicePick::Browse);
+                }
+            }
+        });
+        r.response.on_hover_text(shown.unwrap_or_else(|| tl!("Pick a voice").to_string()));
+        out
+    })
+    .inner
+}
+
+/// Pick a Piper model file for the default neural voice (`None`) or a voice role.
+fn browse_voice_model(app: &mut WordApp, role: Option<usize>) {
+    use crate::file_dialogs::{AfterPick, Asked, FileDialogRequest};
+    if let Asked::Done(Err(e)) = app.ask_file(FileDialogRequest::Open { purpose: "voiceModel".into() }, AfterPick::VoiceModel { role }) {
+        app.status(e);
+    }
+}
+
+/// Read Aloud › the voice engine.
+fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
+    use wordcraft_engine::speech::Engine;
+    let s = app.session.read_aloud.settings().clone();
+    ui.add_space(4.0);
+    ui.label(tl!("Voice"));
+    for (engine, label, tip) in [
+        (Engine::System, "System voice (on this computer)", "The speech program of your operating system."),
+        (
+            Engine::Local,
+            "Neural voice on this computer (Piper)",
+            "A natural voice that runs on this computer. Install Piper and a voice model first.",
+        ),
+    ] {
+        if ui.radio(s.engine == engine, tl!(label)).on_hover_text(tl!(tip)).clicked() && s.engine != engine {
+            speech_user(app, json!({"engine": engine.name()}));
+        }
+    }
+    match s.engine {
+        Engine::Local => {
+            egui::Grid::new("read_aloud_local").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+                ui.label(tl!("Program:"));
+                if let Some(t) = speech_field(ui, "local.program", &s.local.program, false, 320.0) {
+                    speech_user(app, json!({"local": {"program": t}}));
+                }
+                ui.end_row();
+                ui.label(tl!("Voice model:"));
+                let found = voice_choices(app, "local");
+                match voice_field(ui, "local.voice", &s.local.voice, &found, 300.0, true) {
+                    Some(VoicePick::Set(t)) => speech(app, json!({"local": {"voice": t}})),
+                    Some(VoicePick::Browse) => browse_voice_model(app, None),
+                    None => {}
+                }
+                ui.end_row();
+                ui.label(tl!("Arguments (one per line):"));
+                if let Some(t) = speech_field(ui, "local.args", &s.local.args.join("\n"), true, 320.0) {
+                    let args: Vec<&str> = t.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+                    speech_user(app, json!({"local": {"args": args}}));
+                }
+                ui.end_row();
+            });
+            note(
+                ui,
+                "The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.",
+            );
+        }
+        Engine::System => {}
     }
 }
 
@@ -503,6 +624,7 @@ fn read_aloud_chunk(app: &mut WordApp, ui: &mut Ui) {
         });
     });
     note(ui, "Read Aloud prepares and reads this much text, then goes on to the next part.");
+    note(ui, "A neural voice renders this text ahead.");
 }
 
 /// Read Aloud › what is skipped or changed in the text.
@@ -610,13 +732,18 @@ fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
         let help = crate::i18n::fmt(tl!("Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator."), &[("marker", &marker)]);
         ui.label(RichText::new(help).small().weak());
         ui.add_space(4.0);
+        if ui.button(tl!("Find voices again")).on_hover_text(tl!("Ask the speech program and the voice folders for their voices again")).clicked() {
+            app.read_aloud_voices = Some(app.run("readAloud.voices", json!({"refresh": true})).unwrap_or_default());
+        }
+        let lists = [("system", voice_choices(app, "system")), ("local", voice_choices(app, "local"))];
+        let mut browse_role = None;
         // Every role as `readAloud.settings` takes it: [narrator, role…].
         let mut roles: Vec<Value> =
             std::iter::once(all["voices"]["narrator"].clone()).chain(all["voices"]["roles"].as_array().cloned().unwrap_or_default()).collect();
         let mut changed = false;
         let mut remove = None;
-        egui::Grid::new("read_aloud_roles").num_columns(4).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
-            for h in ["Label", "System voice", "Speed", ""] {
+        egui::Grid::new("read_aloud_roles").num_columns(5).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+            for h in ["Label", "System voice", "Neural voice", "Speed", ""] {
                 ui.label(RichText::new(tl!(h)).small().weak());
             }
             ui.end_row();
@@ -627,9 +754,16 @@ fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
                     role["label"] = json!(t.trim());
                     changed = true;
                 }
-                if let Some(t) = speech_field(ui, &format!("role{i}.system"), role["system"].as_str().unwrap_or(""), false, 120.0) {
-                    role["system"] = json!(t);
-                    changed = true;
+                for (key, found) in &lists {
+                    let current = role[*key].as_str().unwrap_or("").to_string();
+                    match voice_field(ui, &format!("role{i}.{key}"), &current, found, 100.0, *key == "local") {
+                        Some(VoicePick::Set(t)) => {
+                            role[*key] = json!(t);
+                            changed = true;
+                        }
+                        Some(VoicePick::Browse) => browse_role = Some(i),
+                        None => {}
+                    }
                 }
                 let mut rate = role["rate"].as_f64().unwrap_or(1.0) as f32;
                 if ui.add(egui::DragValue::new(&mut rate).range(MIN_ROLE_RATE..=MAX_ROLE_RATE).speed(0.01).fixed_decimals(2).suffix("×")).changed() {
@@ -653,6 +787,9 @@ fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
                 roles.push(json!({"label": label}));
                 changed = true;
             }
+        }
+        if let Some(i) = browse_role {
+            browse_voice_model(app, Some(i));
         }
         if changed {
             let narrator = roles.first().cloned().unwrap_or(Value::Null);

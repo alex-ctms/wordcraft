@@ -893,6 +893,7 @@
 	Play/Pause	Lejátszás/szünet
 	Read Aloud Status	Felolvasás állapota
 	Read Aloud Settings	Felolvasás beállításai
+	Read Aloud Voices	Felolvasási hangok
 	Reading Speed	Olvasási sebesség
 	Skip Citations and Bibliography	Hivatkozások és irodalomjegyzék kihagyása
 	Skip citations & bibliography	Hivatkozások és irodalomjegyzék kihagyása
@@ -2731,3 +2732,18 @@
 	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Üres hang esetén a motor alapértelmezett hangja szól. A sebesség a felolvasási sebességhez viszonyított.
 	Voice:	Hang:
 	Until the next marker	A következő jelölőig
+	System voice (on this computer)	Rendszerhang (ezen a számítógépen)
+	The speech program of your operating system.	Az operációs rendszer beszédprogramja.
+	Neural voice on this computer (Piper)	Neurális hang ezen a számítógépen (Piper)
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Természetes hang, amely ezen a számítógépen fut. Előbb telepítse a Pipert és egy hangmodellt.
+	Neural voice	Neurális hang
+	Default voice	Alapértelmezett hang
+	No voices found	Nem található hang
+	Pick a voice	Válasszon hangot
+	Find voices again	Hangok keresése újra
+	Ask the speech program and the voice folders for their voices again	A hangok újbóli lekérése a beszédprogramtól és a hangmappákból
+	A neural voice renders this text ahead.	A neurális hang előre elkészíti ezt a szöveget.
+	Program:	Program:
+	Voice model:	Hangmodell:
+	Arguments (one per line):	Argumentumok (soronként egy):
+	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	A hangmodell egy Piper .onnx fájl elérési útja. Az argumentumokban a {voice}, {output}, {rate} és {lengthScale} minden mondatnál kitöltődik.

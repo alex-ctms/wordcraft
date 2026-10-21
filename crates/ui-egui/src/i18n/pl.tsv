@@ -877,6 +877,7 @@
 	Play/Pause	Odtwórz/wstrzymaj
 	Read Aloud Status	Stan czytania na głos
 	Read Aloud Settings	Ustawienia czytania na głos
+	Read Aloud Voices	Głosy czytania na głos
 	Reading Speed	Szybkość czytania
 	Skip Citations and Bibliography	Pomijaj cytaty i bibliografię
 	Skip citations & bibliography	Pomijaj cytaty i bibliografię
@@ -2740,3 +2741,18 @@ preview	Title	Tytuł
 	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Pusty głos oznacza domyślny głos silnika. Szybkość jest względna wobec szybkości czytania.
 	Voice:	Głos:
 	Until the next marker	Do następnego znacznika
+	System voice (on this computer)	Głos systemowy (na tym komputerze)
+	The speech program of your operating system.	Program mowy Twojego systemu operacyjnego.
+	Neural voice on this computer (Piper)	Głos neuronowy na tym komputerze (Piper)
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Naturalny głos działający na tym komputerze. Najpierw zainstaluj Piper i model głosu.
+	Neural voice	Głos neuronowy
+	Default voice	Głos domyślny
+	No voices found	Nie znaleziono głosów
+	Pick a voice	Wybierz głos
+	Find voices again	Znajdź głosy ponownie
+	Ask the speech program and the voice folders for their voices again	Ponownie zapytaj program mowy i foldery głosów o głosy
+	A neural voice renders this text ahead.	Głos neuronowy generuje ten tekst z wyprzedzeniem.
+	Program:	Program:
+	Voice model:	Model głosu:
+	Arguments (one per line):	Argumenty (jeden w wierszu):
+	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Model głosu to ścieżka do pliku Piper .onnx. W argumentach {voice}, {output}, {rate} i {lengthScale} są wypełniane dla każdego zdania.

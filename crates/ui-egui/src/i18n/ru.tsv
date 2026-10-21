@@ -901,6 +901,7 @@ preview	Title	Пример
 	Play/Pause	Воспроизведение/пауза
 	Read Aloud Status	Состояние чтения вслух
 	Read Aloud Settings	Параметры чтения вслух
+	Read Aloud Voices	Голоса чтения вслух
 	Reading Speed	Скорость чтения
 	Skip Citations and Bibliography	Пропускать ссылки и список литературы
 	Skip citations & bibliography	Пропускать ссылки и список литературы
@@ -2733,3 +2734,18 @@ preview	Title	Пример
 	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Если голос не указан, используется голос движка по умолчанию. Скорость задаётся относительно скорости чтения.
 	Voice:	Голос:
 	Until the next marker	До следующего маркера
+	System voice (on this computer)	Системный голос (на этом компьютере)
+	The speech program of your operating system.	Программа речи вашей операционной системы.
+	Neural voice on this computer (Piper)	Нейронный голос на этом компьютере (Piper)
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Естественный голос, который работает на этом компьютере. Сначала установите Piper и модель голоса.
+	Neural voice	Нейронный голос
+	Default voice	Голос по умолчанию
+	No voices found	Голоса не найдены
+	Pick a voice	Выберите голос
+	Find voices again	Найти голоса снова
+	Ask the speech program and the voice folders for their voices again	Снова запросить голоса у программы речи и в папках голосов
+	A neural voice renders this text ahead.	Нейронный голос озвучивает этот текст заранее.
+	Program:	Программа:
+	Voice model:	Модель голоса:
+	Arguments (one per line):	Аргументы (по одному в строке):
+	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Модель голоса — путь к файлу Piper .onnx. В аргументах {voice}, {output}, {rate} и {lengthScale} заполняются для каждого предложения.

@@ -1,4 +1,5 @@
-//! Read Aloud settings: how much is read at one time, the text rules and the voice roles.
+//! Read Aloud settings: the voice engine, how much is read and rendered at one time, the text
+//! rules and the voice roles.
 //!
 //! `readAloud.settings` and `ui.json` both go through [`SpeechSettings::apply`] and
 //! [`SpeechSettings::to_json`]. The values come from agents and from files, so they are hostile:
@@ -14,6 +15,10 @@ pub const MAX_ROLES: usize = 26;
 pub const MAX_LABEL: usize = 24;
 /// Longest voice name, in characters.
 const MAX_VOICE: usize = 64;
+/// Longest program, path or argument, in characters.
+const MAX_FIELD: usize = 2048;
+/// Most arguments of the local voice program.
+const MAX_ARGS: usize = 32;
 /// Most replacements, and the longest side of one, in characters.
 pub const MAX_REPLACEMENTS: usize = 200;
 const MAX_REPLACEMENT_CHARS: usize = 100;
@@ -28,7 +33,17 @@ const PATTERN_SIZE_LIMIT: usize = 1 << 20;
 pub const MIN_ROLE_RATE: f32 = 0.5;
 pub const MAX_ROLE_RATE: f32 = 2.0;
 
-/// How much is read at one time.
+/// The program that speaks.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Engine {
+    /// The system's speech program (`say`, `espeak-ng`, Windows speech).
+    #[default]
+    System,
+    /// A local neural voice program, Piper by default; it writes a WAV file.
+    Local,
+}
+
+/// How much is read, and rendered ahead, at one time.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Chunk {
     #[default]
@@ -70,9 +85,30 @@ macro_rules! names {
         }
     };
 }
+names!(Engine { System = "system", Local = "local" });
 names!(Chunk { Paragraph = "paragraph", Page = "page", Document = "document" });
 names!(UrlMode { Read = "read", Domain = "domain", Skip = "skip" });
 names!(Scope { Paragraph = "paragraph", UntilNext = "untilNext" });
+
+/// The local voice program.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LocalVoice {
+    pub program: String,
+    /// Arguments, with `{voice}`, `{output}`, `{rate}` and `{lengthScale}` filled in for each sentence.
+    pub args: Vec<String>,
+    /// The default voice (for Piper, the path of a `.onnx` voice model).
+    pub voice: String,
+}
+
+impl Default for LocalVoice {
+    fn default() -> Self {
+        LocalVoice {
+            program: "piper".into(),
+            args: ["--model", "{voice}", "--output_file", "{output}", "--length_scale", "{lengthScale}"].map(String::from).to_vec(),
+            voice: String::new(),
+        }
+    }
+}
 
 /// What is left out of, or changed in, the spoken text. See [`super::clean::clean`].
 #[derive(Clone, Debug)]
@@ -124,15 +160,16 @@ impl PartialEq for TextRules {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Role {
     pub label: String,
-    /// The system voice; empty keeps the default voice.
+    /// The voice for each engine; empty keeps the engine's default voice.
     pub system: String,
+    pub local: String,
     /// Speed relative to the reading speed.
     pub rate: f32,
 }
 
 impl Role {
     fn new(label: &str) -> Role {
-        Role { label: label.into(), system: String::new(), rate: 1.0 }
+        Role { label: label.into(), system: String::new(), local: String::new(), rate: 1.0 }
     }
 }
 
@@ -173,7 +210,9 @@ impl Voices {
 /// Every Read Aloud setting.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct SpeechSettings {
+    pub engine: Engine,
     pub chunk: Chunk,
+    pub local: LocalVoice,
     pub text: TextRules,
     pub voices: Voices,
 }
@@ -254,22 +293,69 @@ fn rate(v: &Value, key: &str) -> Result<Option<f32>, CmdError> {
     }
 }
 
+/// Who changes the settings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Origin {
+    /// The user, in File › Options, or the settings saved in `ui.json`.
+    User,
+    /// A command (`readAloud.settings` from the control channel, MCP, the CLI or a script). A
+    /// command may not choose the program WordCraft runs (`local.program`, `local.args`): any
+    /// client that can send commands could otherwise make WordCraft run any program.
+    Command,
+}
+
 impl SpeechSettings {
-    /// Change the settings `v` names; anything else stays. A bad value is an error, and then
-    /// nothing changes.
+    /// Change the settings `v` names, as a command ([`Origin::Command`]); anything else stays. A
+    /// bad value is an error, and then nothing changes.
     pub fn apply(&mut self, v: &Value) -> Result<(), CmdError> {
+        self.apply_from(v, Origin::Command)
+    }
+
+    /// [`SpeechSettings::apply`] for `origin`.
+    pub fn apply_from(&mut self, v: &Value, origin: Origin) -> Result<(), CmdError> {
         if !v.is_object() {
             return Err(bad("the settings must be an object"));
         }
         let mut s = self.clone();
+        if let Some(e) = choice(v, "engine", Engine::parse, Engine::NAMES)? {
+            s.engine = e;
+        }
         if let Some(c) = choice(v, "chunk", Chunk::parse, Chunk::NAMES)? {
             s.chunk = c;
+        }
+        if let Some(l) = object(v, "local")? {
+            let l = Value::Object(l.clone());
+            if let Some(p) = voice_name(&l, "program", MAX_FIELD)? {
+                if p.is_empty() {
+                    return Err(bad("`local.program` is empty"));
+                }
+                s.local.program = p;
+            }
+            if let Some(a) = array(&l, "args", MAX_ARGS)? {
+                let mut args = Vec::new();
+                for x in a {
+                    match x.as_str() {
+                        Some(t) if t.chars().count() <= MAX_FIELD && !t.chars().any(char::is_control) => args.push(t.to_string()),
+                        _ => return Err(bad("`local.args` must be a list of short strings")),
+                    }
+                }
+                s.local.args = args;
+            }
+            if let Some(x) = voice_name(&l, "voice", MAX_FIELD)? {
+                s.local.voice = x;
+            }
         }
         if let Some(t) = object(v, "text")? {
             s.text = text_rules(&Value::Object(t.clone()), s.text)?;
         }
         if let Some(x) = object(v, "voices")? {
             s.voices = voices(&Value::Object(x.clone()), s.voices)?;
+        }
+        if origin == Origin::Command {
+            // The same values are fine: an agent may send back the settings it read.
+            if s.local.program != self.local.program || s.local.args != self.local.args {
+                return Err(bad("`local.program` and `local.args` choose the program WordCraft runs: change them in File › Options › Accessibility"));
+            }
         }
         *self = s;
         Ok(())
@@ -283,7 +369,7 @@ impl SpeechSettings {
             for (k, x) in m {
                 let mut one = Map::new();
                 one.insert(k.clone(), x.clone());
-                if s.apply(&Value::Object(one)).is_err() {
+                if s.apply_from(&Value::Object(one), Origin::User).is_err() {
                     log::warn!("Read Aloud setting `{k}` ignored");
                 }
             }
@@ -292,10 +378,12 @@ impl SpeechSettings {
     }
 
     pub fn to_json(&self) -> Value {
-        let role = |r: &Role| json!({"label": r.label, "system": r.system, "rate": r.rate});
+        let role = |r: &Role| json!({"label": r.label, "system": r.system, "local": r.local, "rate": r.rate});
         let t = &self.text;
         json!({
+            "engine": self.engine.name(),
             "chunk": self.chunk.name(),
+            "local": {"program": self.local.program, "args": self.local.args, "voice": self.local.voice},
             "text": {
                 "urls": t.urls.name(),
                 "skipEmoji": t.skip_emoji,
@@ -318,10 +406,15 @@ impl SpeechSettings {
         })
     }
 
-    /// The system voice and speed factor of `role` (an empty voice: the default voice).
+    /// The voice and speed factor of `role` for the current engine (an empty voice: the
+    /// engine's default).
     pub fn role_voice(&self, role: usize) -> (&str, f32) {
         let r = self.voices.roles.get(role);
-        (r.map_or("", |r| r.system.as_str()), r.map_or(1.0, |r| r.rate))
+        let voice = r.map_or("", |r| match self.engine {
+            Engine::System => r.system.as_str(),
+            Engine::Local => r.local.as_str(),
+        });
+        (voice, r.map_or(1.0, |r| r.rate))
     }
 }
 
@@ -395,6 +488,9 @@ fn role(v: &Value, mut r: Role) -> Result<Role, CmdError> {
     if let Some(x) = voice_name(v, "system", MAX_VOICE)? {
         r.system = x;
     }
+    if let Some(x) = voice_name(v, "local", MAX_FIELD)? {
+        r.local = x;
+    }
     if let Some(x) = rate(v, "rate")? {
         r.rate = x;
     }
@@ -459,6 +555,7 @@ mod tests {
     #[test]
     fn defaults_round_trip() {
         let s = SpeechSettings::default();
+        assert_eq!(s.engine, Engine::System);
         assert_eq!(s.chunk, Chunk::Paragraph);
         assert_eq!(s.voices.marker, '§');
         assert_eq!(SpeechSettings::load(&s.to_json()), s);
@@ -488,6 +585,10 @@ mod tests {
             json!(5),
             json!({"chunk": "chapter"}),
             json!({"chunk": 3}),
+            json!({"engine": "telepathy"}),
+            json!({"engine": "local", "chunk": 3}),
+            json!({"local": {"program": "--evil"}}),
+            json!({"local": {"args": [1]}}),
             json!({"voices": {"marker": "ab"}}),
             json!({"voices": {"marker": "a"}}),
             json!({"voices": {"marker": " "}}),
@@ -507,8 +608,25 @@ mod tests {
     }
 
     #[test]
+    fn commands_cannot_choose_the_program_or_where_text_goes() {
+        let mut s = SpeechSettings::default();
+        for bad in [json!({"local": {"program": "/bin/sh"}}), json!({"local": {"args": ["-c", "rm -rf ~"]}})] {
+            assert!(s.apply(&bad).is_err(), "{bad}");
+            assert_eq!(s, SpeechSettings::default(), "{bad}");
+        }
+        // The settings as read back, unchanged, are fine, and so is everything else.
+        s.apply(&SpeechSettings::default().to_json()).unwrap();
+        s.apply(&json!({"engine": "local", "local": {"voice": "/voices/a.onnx"}})).unwrap();
+        // The user may change them (File › Options, `ui.json`).
+        s.apply_from(&json!({"local": {"program": "/opt/piper/piper"}}), Origin::User).unwrap();
+        assert_eq!((s.engine, s.local.program.as_str()), (Engine::Local, "/opt/piper/piper"));
+        assert_eq!(SpeechSettings::load(&s.to_json()), s);
+    }
+
+    #[test]
     fn a_damaged_file_keeps_the_good_sections() {
-        let s = SpeechSettings::load(&json!({"chunk": {"x": 1}, "voices": "junk", "text": {"skipEmoji": true}}));
+        let s = SpeechSettings::load(&json!({"engine": "local", "chunk": {"x": 1}, "voices": "junk", "text": {"skipEmoji": true}}));
+        assert_eq!(s.engine, Engine::Local);
         assert_eq!(s.chunk, Chunk::Paragraph);
         assert!(s.text.skip_emoji);
         assert_eq!(s.voices, Voices::default());

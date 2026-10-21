@@ -1711,6 +1711,7 @@ template	Letter	Pismo
 	Read Aloud	Čitaj naglas
 	Read Aloud Status	Status čitanja naglas
 	Read Aloud Settings	Postavke čitanja naglas
+	Read Aloud Voices	Glasovi za čitanje naglas
 	Read Mode	Čitanje
 	Read\nAloud	Čitaj\nnaglas
 	Read\nMode	Čitanje
@@ -2735,3 +2736,18 @@ preview	Title	Naslov
 	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Prazan glas koristi zadani glas pogona. Brzina je relativna u odnosu na brzinu čitanja.
 	Voice:	Glas:
 	Until the next marker	Do sljedeće oznake
+	System voice (on this computer)	Sistemski glas (na ovom računalu)
+	The speech program of your operating system.	Govorni program vašeg operacijskog sustava.
+	Neural voice on this computer (Piper)	Neuronski glas na ovom računalu (Piper)
+	A natural voice that runs on this computer. Install Piper and a voice model first.	Prirodan glas koji radi na ovom računalu. Najprije instalirajte Piper i model glasa.
+	Neural voice	Neuronski glas
+	Default voice	Zadani glas
+	No voices found	Nema pronađenih glasova
+	Pick a voice	Odaberite glas
+	Find voices again	Ponovno pronađi glasove
+	Ask the speech program and the voice folders for their voices again	Ponovno zatraži glasove od govornog programa i mapa s glasovima
+	A neural voice renders this text ahead.	Neuronski glas unaprijed generira ovaj tekst.
+	Program:	Program:
+	Voice model:	Model glasa:
+	Arguments (one per line):	Argumenti (jedan po retku):
+	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Model glasa je putanja do Piper .onnx datoteke. U argumentima se {voice}, {output}, {rate} i {lengthScale} popunjavaju za svaku rečenicu.
