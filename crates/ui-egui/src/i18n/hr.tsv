@@ -2719,5 +2719,6 @@ preview	Title	Naslov
 	Characters to skip:	Znakovi za preskakanje:
 	Say instead (one per line, text = spoken as):	Izgovori umjesto toga (jedno po retku, tekst = izgovor):
 	The text on the page doesn't change. Only the spoken text does.	Tekst na stranici se ne mijenja. Mijenja se samo izgovoreni tekst.
+	Write each replacement on its own line as: text = spoken as	Svaku zamjenu napišite u zasebnom retku: tekst = izgovor
 	Read all of the address	Čitaj cijelu adresu
 	Skip	Preskoči

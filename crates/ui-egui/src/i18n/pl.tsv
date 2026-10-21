@@ -2724,5 +2724,6 @@ preview	Title	Tytuł
 	Characters to skip:	Znaki do pominięcia:
 	Say instead (one per line, text = spoken as):	Mów zamiast tego (jedno w wierszu, tekst = wymowa):
 	The text on the page doesn't change. Only the spoken text does.	Tekst na stronie się nie zmienia. Zmienia się tylko wypowiadany tekst.
+	Write each replacement on its own line as: text = spoken as	Każdą zamianę wpisz w osobnym wierszu: tekst = wymowa
 	Read all of the address	Czytaj cały adres
 	Skip	Pomijaj

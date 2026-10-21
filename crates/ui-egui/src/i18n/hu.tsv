@@ -2715,5 +2715,6 @@
 	Characters to skip:	Kihagyandó karakterek:
 	Say instead (one per line, text = spoken as):	Helyette mondja (soronként egy, szöveg = kiejtés):
 	The text on the page doesn't change. Only the spoken text does.	Az oldalon lévő szöveg nem változik. Csak a kimondott szöveg változik.
+	Write each replacement on its own line as: text = spoken as	Minden cserét külön sorba írjon: szöveg = kiejtés
 	Read all of the address	A teljes cím felolvasása
 	Skip	Kihagyás

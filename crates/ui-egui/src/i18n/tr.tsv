@@ -2716,5 +2716,6 @@ preview	Title	Örnek
 	Characters to skip:	Atlanacak karakterler:
 	Say instead (one per line, text = spoken as):	Bunun yerine söyle (satır başına bir tane, metin = söyleniş):
 	The text on the page doesn't change. Only the spoken text does.	Sayfadaki metin değişmez. Yalnızca söylenen metin değişir.
+	Write each replacement on its own line as: text = spoken as	Her değiştirmeyi ayrı bir satıra yazın: metin = söyleniş
 	Read all of the address	Adresin tamamını oku
 	Skip	Atla

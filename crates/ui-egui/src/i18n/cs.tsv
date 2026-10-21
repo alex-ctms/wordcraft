@@ -2711,5 +2711,6 @@ preview	Title	Ukázka
 	Characters to skip:	Znaky k přeskočení:
 	Say instead (one per line, text = spoken as):	Vyslovit místo toho (jedno na řádek, text = výslovnost):
 	The text on the page doesn't change. Only the spoken text does.	Text na stránce se nemění. Mění se jen vyslovený text.
+	Write each replacement on its own line as: text = spoken as	Každou náhradu napište na samostatný řádek: text = výslovnost
 	Read all of the address	Číst celou adresu
 	Skip	Přeskočit

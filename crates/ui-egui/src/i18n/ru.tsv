@@ -2717,5 +2717,6 @@ preview	Title	Пример
 	Characters to skip:	Пропускать символы:
 	Say instead (one per line, text = spoken as):	Произносить иначе (по одному в строке, текст = как произносить):
 	The text on the page doesn't change. Only the spoken text does.	Текст на странице не меняется. Меняется только произносимый текст.
+	Write each replacement on its own line as: text = spoken as	Пишите каждую замену на отдельной строке: текст = как произносить
 	Read all of the address	Читать адрес полностью
 	Skip	Пропускать

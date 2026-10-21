@@ -2759,5 +2759,6 @@ template	Letter	Thư
 	Characters to skip:	Ký tự bỏ qua:
 	Say instead (one per line, text = spoken as):	Nói thay bằng (mỗi dòng một mục, văn bản = cách đọc):
 	The text on the page doesn't change. Only the spoken text does.	Văn bản trên trang không thay đổi. Chỉ văn bản được đọc thay đổi.
+	Write each replacement on its own line as: text = spoken as	Viết mỗi mục thay thế trên một dòng: văn bản = cách đọc
 	Read all of the address	Đọc toàn bộ địa chỉ
 	Skip	Bỏ qua

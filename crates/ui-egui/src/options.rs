@@ -545,13 +545,20 @@ fn read_aloud_text(app: &mut WordApp, ui: &mut Ui) {
         ui.label(tl!("Say instead (one per line, text = spoken as):"));
         let current: Vec<String> = t.replacements.iter().map(|(f, to)| format!("{f} = {to}")).collect();
         if let Some(text) = speech_field(ui, "text.replacements", &current.join("\n"), true, 320.0) {
-            let list: Vec<Value> = text
+            // Every line that isn't blank must be `text = spoken as`: a line without `=` is a
+            // mistake, so nothing changes and the user is told, rather than the line (and the
+            // replacement it was) being dropped.
+            let lines: Vec<Option<(&str, &str)>> = text
                 .lines()
-                .filter_map(|l| l.split_once(" = ").or_else(|| l.split_once('=')))
-                .filter(|(f, _)| !f.trim().is_empty())
-                .map(|(f, to)| json!({"from": f.trim(), "to": to.trim()}))
+                .filter(|l| !l.trim().is_empty())
+                .map(|l| l.split_once(" = ").or_else(|| l.split_once('=')).filter(|(f, _)| !f.trim().is_empty()))
                 .collect();
-            speech(app, json!({"text": {"replacements": list}}));
+            if lines.iter().any(Option::is_none) {
+                app.status(tl!("Write each replacement on its own line as: text = spoken as"));
+            } else {
+                let list: Vec<Value> = lines.into_iter().flatten().map(|(f, to)| json!({"from": f.trim(), "to": to.trim()})).collect();
+                speech(app, json!({"text": {"replacements": list}}));
+            }
         }
         ui.end_row();
         ui.label(tl!("Skip text that matches (regular expressions, one per line):"));

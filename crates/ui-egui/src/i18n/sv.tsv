@@ -2734,5 +2734,6 @@ preview	Title	Titel
 	Characters to skip:	Tecken att hoppa över:
 	Say instead (one per line, text = spoken as):	Säg i stället (en per rad, text = uttal):
 	The text on the page doesn't change. Only the spoken text does.	Texten på sidan ändras inte. Bara den upplästa texten ändras.
+	Write each replacement on its own line as: text = spoken as	Skriv varje ersättning på en egen rad: text = uttal
 	Read all of the address	Läs hela adressen
 	Skip	Hoppa över

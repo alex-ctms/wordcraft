@@ -2728,5 +2728,6 @@ preview	Title	Esempio
 	Characters to skip:	Caratteri da saltare:
 	Say instead (one per line, text = spoken as):	Pronuncia invece (uno per riga, testo = pronuncia):
 	The text on the page doesn't change. Only the spoken text does.	Il testo della pagina non cambia. Cambia solo il testo pronunciato.
+	Write each replacement on its own line as: text = spoken as	Scrivi ogni sostituzione su una riga: testo = pronuncia
 	Read all of the address	Leggi tutto l'indirizzo
 	Skip	Salta

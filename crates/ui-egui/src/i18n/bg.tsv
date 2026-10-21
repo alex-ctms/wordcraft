@@ -2708,5 +2708,6 @@
 	Characters to skip:	Знаци за пропускане:
 	Say instead (one per line, text = spoken as):	Произнасяне вместо това (по един на ред, текст = произношение):
 	The text on the page doesn't change. Only the spoken text does.	Текстът на страницата не се променя. Променя се само изговореният текст.
+	Write each replacement on its own line as: text = spoken as	Пишете всяка замяна на отделен ред: текст = произношение
 	Read all of the address	Четене на целия адрес
 	Skip	Пропускане
