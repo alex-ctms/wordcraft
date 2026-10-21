@@ -73,12 +73,42 @@ pub(crate) fn players(wav: &Path) -> Vec<Run> {
     }
 }
 
-/// A new temporary file name for Read Aloud audio or requests.
-pub(crate) fn temp_file(ext: &str) -> PathBuf {
+/// Read Aloud's private temporary folder: made once per process in the system's temporary
+/// folder, with a random name and, on Unix, readable by this user only (mode 0700), so other
+/// users can't read the sentences or put a link where a file will be written.
+#[cfg(not(target_arch = "wasm32"))]
+fn private_dir() -> Result<&'static Path, String> {
+    static DIR: std::sync::OnceLock<Result<PathBuf, String>> = std::sync::OnceLock::new();
+    DIR.get_or_init(|| {
+        let mut last = String::from("no temporary folder");
+        for _ in 0..8 {
+            let mut bytes = [0u8; 8];
+            getrandom::fill(&mut bytes).map_err(|e| e.to_string())?;
+            let name: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+            let dir = std::env::temp_dir().join(format!("wordcraft-speech-{}-{name}", std::process::id()));
+            let mut b = std::fs::DirBuilder::new();
+            #[cfg(unix)]
+            std::os::unix::fs::DirBuilderExt::mode(&mut b, 0o700);
+            // `create` fails when the folder exists: a folder someone else made is never used.
+            match b.create(&dir) {
+                Ok(()) => return Ok(dir),
+                Err(e) => last = e.to_string(),
+            }
+        }
+        Err(format!("Read Aloud couldn't make its temporary folder: {last}"))
+    })
+    .as_ref()
+    .map(PathBuf::as_path)
+    .map_err(Clone::clone)
+}
+
+/// A new file name in Read Aloud's private temporary folder, for audio or requests.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn temp_file(ext: &str) -> Result<PathBuf, String> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static N: AtomicU64 = AtomicU64::new(0);
     let n = N.fetch_add(1, Ordering::Relaxed);
-    std::env::temp_dir().join(format!("wordcraft-speech-{}-{n}.{ext}", std::process::id()))
+    Ok(private_dir()?.join(format!("{n}.{ext}")))
 }
 
 /// How a program run ended.
@@ -120,13 +150,16 @@ pub(crate) fn run(run: &Run, changed: &dyn Fn() -> bool) -> Ran {
     }
 }
 
-/// Play the WAV file `wav` with the first player that starts.
+/// Play the WAV file `wav` with the first player that plays it: a player that doesn't start, or
+/// fails (`pw-play` without a running PipeWire), hands it to the next one. `Exited(true)` when
+/// one played it to the end.
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn play(wav: &Path, changed: &dyn Fn() -> bool) -> Ran {
     let mut last = Ran::NotStarted("no audio player on this system (install PipeWire, PulseAudio, ALSA utilities or FFmpeg)".into());
     for p in players(wav) {
         match run(&p, changed) {
             Ran::NotStarted(e) => last = Ran::NotStarted(format!("{}: {e}", p.program.display())),
+            Ran::Exited(false) => last = Ran::NotStarted(format!("the audio player {} failed", p.program.display())),
             done => return done,
         }
     }
@@ -373,7 +406,18 @@ mod tests {
         for r in &p {
             assert!(r.args.last().is_some_and(|a| a == "/tmp/a.wav") || r.env.iter().any(|(_, v)| v == "/tmp/a.wav"));
         }
-        assert_ne!(temp_file("wav"), temp_file("wav"));
+        let (a, b) = (temp_file("wav").unwrap(), temp_file("wav").unwrap());
+        assert_ne!(a, b);
+        assert_eq!(a.parent(), b.parent());
+        // The folder is this user's alone, and its name can't be guessed.
+        let dir = a.parent().unwrap();
+        assert!(dir.is_dir() && dir.starts_with(std::env::temp_dir()));
+        assert!(dir.file_name().unwrap().to_string_lossy().len() > "wordcraft-speech-1-".len() + 15);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(std::fs::metadata(dir).unwrap().permissions().mode() & 0o777, 0o700);
+        }
         assert_eq!(length_scale(f32::NAN), 1.0);
         assert_eq!(length_scale(100.0), 0.25);
     }

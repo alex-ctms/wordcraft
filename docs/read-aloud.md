@@ -36,8 +36,8 @@ The list shows the `.onnx` files in the folders of the models that you use, and 
 download folders (for example `~/.local/share/piper-voices`). Piper 1.8 installs with
 `uv tool install piper-tts`. Its `python -m piper.download_voices` command downloads models.
 
-Read Aloud gives the sentence to the program on stdin. The program writes a WAV file. The
-default arguments are:
+Read Aloud gives the sentence to the program on stdin. The program writes a WAV file in a
+private temporary folder that only your user can read. The default arguments are:
 
 ```
 --model {voice} --output_file {output} --length_scale {lengthScale}
@@ -159,8 +159,10 @@ wordcraft-cli run --template sample \
 ```
 
 For safety, `readAloud.settings` cannot change `local.program` or `local.args`. These settings
-choose the program that WordCraft runs. Change them in **File › Options › Accessibility**. The
-command accepts the same values that it returned, so an agent can send the settings back.
+choose the program that WordCraft runs. Change them in **File › Options › Accessibility**. A new
+neural voice path from the command can have only letters, digits and `. _ / \ : -`, because the
+program arguments can be a shell command. The command accepts the same values that it returned,
+so an agent can send the settings back.
 
 `readAloud.voices` returns the voices in the lists: `system` and `local`, each a list of
 `{"id", "label"}`. With `{"refresh": true}`, it asks the speech program again.

@@ -305,7 +305,8 @@ impl WordApp {
                 };
                 // The model's folder is searched from now on.
                 self.read_aloud_voices = None;
-                self.run("readAloud.settings", params).map_err(|e| e.to_string())
+                // The user picked the file: any path (a command takes plain paths only).
+                wordcraft_engine::cmd::speech::apply_user_settings(&mut self.session, &params).map_err(|e| e.to_string())
             }
             AfterPick::ComparePath { revised } => {
                 let Some(path) = picked else { return Ok(json!({"cancelled": true})) };

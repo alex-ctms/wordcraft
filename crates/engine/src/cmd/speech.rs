@@ -95,6 +95,20 @@ fn restart(s: &mut Session) {
     }
 }
 
+/// Change the Read Aloud settings as the user ([`speech::settings::Origin::User`]): File ›
+/// Options and the voice model the user picked. Unlike `readAloud.settings`, this may choose the
+/// program WordCraft runs and any voice path, so it is not a command: no script, control channel
+/// or MCP client can reach it. A reading in progress carries on from the same sentence.
+pub fn apply_user_settings(s: &mut Session, v: &Value) -> CmdResult {
+    let mut next = s.read_aloud.settings().clone();
+    next.apply_from(v, speech::settings::Origin::User)?;
+    if next != *s.read_aloud.settings() {
+        s.read_aloud.set_settings(next);
+        restart(s);
+    }
+    Ok(s.read_aloud.settings().to_json())
+}
+
 /// Read or change the Read Aloud settings.
 fn settings(s: &mut Session, v: &Value) -> CmdResult {
     let has_any = v.as_object().is_some_and(|m| !m.is_empty());
@@ -418,6 +432,16 @@ mod tests {
         // A command can't choose the program WordCraft runs.
         assert!(s.run("readAloud.settings", &json!({"local": {"program": "/bin/sh"}})).is_err());
         assert_eq!(s.read_aloud.settings().local.program, "piper");
+    }
+
+    #[test]
+    fn the_user_may_choose_the_program_and_any_voice_path() {
+        let mut s = Session::new(Document::from_text("x"));
+        assert!(s.run("readAloud.settings", &json!({"local": {"voice": "/my voices/a.onnx"}})).is_err());
+        let r = super::apply_user_settings(&mut s, &json!({"local": {"program": "/opt/piper/piper", "voice": "/my voices/a.onnx"}})).unwrap();
+        assert_eq!((r["local"]["program"].as_str(), r["local"]["voice"].as_str()), (Some("/opt/piper/piper"), Some("/my voices/a.onnx")));
+        // Sent back unchanged, the settings are fine for a command too.
+        s.run("readAloud.settings", &r).unwrap();
     }
 
     #[test]

@@ -293,6 +293,12 @@ fn rate(v: &Value, key: &str) -> Result<Option<f32>, CmdError> {
     }
 }
 
+/// Is `path` a voice a command may set for the local voice program: letters, digits and
+/// `. _ / \ : -` only, so it can't mean anything else to a shell in the argument template.
+pub fn command_path_ok(path: &str) -> bool {
+    path.chars().all(|c| c.is_alphanumeric() || matches!(c, '.' | '_' | '/' | '\\' | ':' | '-'))
+}
+
 /// Who changes the settings.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Origin {
@@ -355,6 +361,15 @@ impl SpeechSettings {
             // The same values are fine: an agent may send back the settings it read.
             if s.local.program != self.local.program || s.local.args != self.local.args {
                 return Err(bad("`local.program` and `local.args` choose the program WordCraft runs: change them in File › Options › Accessibility"));
+            }
+            // A voice goes into the program's arguments, which may be a shell's (`sh -c …`): a new
+            // one from a command is a plain name or path only.
+            let known: Vec<&str> = self.voices.roles.iter().map(|r| r.local.as_str()).chain([self.local.voice.as_str()]).collect();
+            let new = s.voices.roles.iter().map(|r| r.local.as_str()).chain([s.local.voice.as_str()]);
+            if let Some(v) = new.filter(|v| !known.contains(v)).find(|v| !command_path_ok(v)) {
+                return Err(bad(format!(
+                    "the voice `{v}` may only have letters, digits and . _ / \\ : - when set by a command: set it in File › Options › Accessibility"
+                )));
             }
         }
         *self = s;
@@ -614,6 +629,21 @@ mod tests {
             assert!(s.apply(&bad).is_err(), "{bad}");
             assert_eq!(s, SpeechSettings::default(), "{bad}");
         }
+        // A new voice from a command is a plain path: nothing a shell would read.
+        for bad in [
+            json!({"local": {"voice": "x; rm -rf ~"}}),
+            json!({"local": {"voice": "$(id)"}}),
+            json!({"voices": {"roles": [{"label": "A", "local": "a`b`.onnx"}]}}),
+            json!({"local": {"voice": "/my voices/a.onnx"}}),
+        ] {
+            assert!(s.apply(&bad).is_err(), "{bad}");
+            assert_eq!(s, SpeechSettings::default(), "{bad}");
+        }
+        s.apply(&json!({"local": {"voice": "C:\\Voices\\en_US-amy.onnx"}, "voices": {"roles": [{"label": "A", "local": "/v/x-1_2.onnx"}]}})).unwrap();
+        // The user may pick any path; a command may send it back unchanged.
+        s.apply_from(&json!({"local": {"voice": "/my voices/a.onnx"}}), Origin::User).unwrap();
+        s.apply(&s.to_json()).unwrap();
+        s = SpeechSettings::default();
         // The settings as read back, unchanged, are fine, and so is everything else.
         s.apply(&SpeechSettings::default().to_json()).unwrap();
         s.apply(&json!({"engine": "local", "local": {"voice": "/voices/a.onnx"}})).unwrap();

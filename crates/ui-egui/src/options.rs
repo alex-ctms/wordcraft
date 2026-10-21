@@ -469,11 +469,8 @@ fn speech(app: &mut WordApp, params: Value) {
 /// Change Read Aloud settings that only the user may change: the program WordCraft runs. Commands
 /// can't ([`wordcraft_engine::speech::settings::Origin`]), so the pane changes them directly.
 fn speech_user(app: &mut WordApp, params: Value) {
-    use wordcraft_engine::speech::settings::Origin;
-    let mut next = app.session.read_aloud.settings().clone();
-    match next.apply_from(&params, Origin::User) {
-        Ok(()) => app.session.read_aloud.set_settings(next),
-        Err(e) => app.status(e.to_string()),
+    if let Err(e) = wordcraft_engine::cmd::speech::apply_user_settings(&mut app.session, &params) {
+        app.status(e.to_string());
     }
 }
 
@@ -582,7 +579,7 @@ fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
                 ui.label(tl!("Voice model:"));
                 let found = voice_choices(app, "local");
                 match voice_field(ui, "local.voice", &s.local.voice, &found, 300.0, true) {
-                    Some(VoicePick::Set(t)) => speech(app, json!({"local": {"voice": t}})),
+                    Some(VoicePick::Set(t)) => speech_user(app, json!({"local": {"voice": t}})),
                     Some(VoicePick::Browse) => browse_voice_model(app, None),
                     None => {}
                 }
@@ -793,7 +790,8 @@ fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
         }
         if changed {
             let narrator = roles.first().cloned().unwrap_or(Value::Null);
-            speech(app, json!({"voices": {"narrator": narrator, "roles": roles.get(1..).unwrap_or(&[])}}));
+            // The user may pick any voice path: not through the command, which takes plain paths only.
+            speech_user(app, json!({"voices": {"narrator": narrator, "roles": roles.get(1..).unwrap_or(&[])}}));
         }
         note(ui, "An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.");
     });

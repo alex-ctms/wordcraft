@@ -1111,6 +1111,9 @@ fn worker(shared: &(Mutex<Shared>, Condvar), backend: Backend) {
         match outcome {
             Spoken::Done => {
                 s.index += 1;
+                // The renderer renders a few sentences ahead of `index` (a whole document): wake
+                // it, or it waits while the player waits for it.
+                cv.notify_all();
                 if s.index >= s.queue.len() {
                     let next = s.chunk.saturating_add(1);
                     if s.load(next, true) {
@@ -1151,12 +1154,15 @@ fn play_rendered(shared: &(Mutex<Shared>, Condvar), index: usize, generation: u6
             if !s.rendering {
                 break Clip::Failed("the neural voice stopped".into());
             }
+            // The renderer may be waiting for the player to move on: let it see where it is.
+            cv.notify_all();
             s = cv.wait(s).unwrap_or_else(PoisonError::into_inner);
         }
     };
     let failed = match clip {
         Clip::Ready(path) => match neural::play(&path, changed) {
-            neural::Ran::Exited(_) => return Spoken::Done,
+            neural::Ran::Exited(true) => return Spoken::Done,
+            neural::Ran::Exited(false) => "the audio player couldn't play the sentence".into(),
             neural::Ran::Interrupted => return Spoken::Interrupted,
             neural::Ran::NotStarted(e) => e,
         },
@@ -1232,7 +1238,10 @@ const RENDER_AHEAD: usize = 3;
 #[cfg(not(target_arch = "wasm32"))]
 fn render(settings: &SpeechSettings, voice: &str, rate: f32, text: &str, changed: &dyn Fn() -> bool) -> Option<Clip> {
     use neural::Ran;
-    let out = neural::temp_file("wav");
+    let out = match neural::temp_file("wav") {
+        Ok(p) => p,
+        Err(e) => return Some(Clip::Failed(e)),
+    };
     let result = match settings.engine {
         Engine::System => return None,
         Engine::Local => match neural::local_run(&settings.local, voice, rate, &out, text) {
