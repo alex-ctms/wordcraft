@@ -231,10 +231,16 @@ pub(crate) fn remove(path: impl AsRef<Path>) {
     let _ = std::fs::remove_file(path);
 }
 
-/// Write the request file of a cloud sentence (a [`temp_file`]).
+/// Write the request file of a cloud sentence (a [`temp_file`]): a new file only (never one that
+/// is there already, or a link), readable by this user only (mode 0600 on Unix).
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn write_request(path: &Path, body: Vec<u8>) -> std::io::Result<()> {
-    std::fs::write(path, body)
+    use std::io::Write;
+    let mut o = std::fs::OpenOptions::new();
+    o.write(true).create_new(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut o, 0o600);
+    o.open(path)?.write_all(&body)
 }
 
 /// Does `path` hold some audio?
@@ -424,6 +430,20 @@ mod tests {
         l.voice.clear();
         l.args = vec!["--out".into(), "{output}".into(), "--speed".into(), "{rate}".into()];
         assert_eq!(local_run(&l, "", 1.5, out, "x").unwrap().args, ["--out", "/tmp/x.wav", "--speed", "1.50"]);
+    }
+
+    #[test]
+    fn cloud_requests_are_private_new_files() {
+        let p = temp_file("json").unwrap();
+        write_request(&p, b"{}".to_vec()).unwrap();
+        // Never over a file (or a link) that is there already.
+        assert!(write_request(&p, b"{}".to_vec()).is_err());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(std::fs::metadata(&p).unwrap().permissions().mode() & 0o777, 0o600);
+        }
+        remove(&p);
     }
 
     #[test]
