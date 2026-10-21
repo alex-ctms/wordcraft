@@ -2718,3 +2718,16 @@
 	Write each replacement on its own line as: text = spoken as	Minden cserét külön sorba írjon: szöveg = kiejtés
 	Read all of the address	A teljes cím felolvasása
 	Skip	Kihagyás
+	Read Aloud: voices	Felolvasás: hangok
+	Change the voice where a marker character starts the text	Hang váltása, ahol jelölő karakter kezdi a szöveget
+	Marker character:	Jelölő karakter:
+	A marker changes the voice:	A jelölő váltja a hangot:
+	To the end of the paragraph	A bekezdés végéig
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Írja a jelölőt és a hangcímkét a szöveg elé, például §A Szia. A narrátorhoz a §N vagy a §Narrator jelölővel térhet vissza.
+	Label	Címke
+	System voice	Rendszerhang
+	Narrator	Narrátor
+	Add a voice	Hang hozzáadása
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Üres hang esetén a motor alapértelmezett hangja szól. A sebesség a felolvasási sebességhez viszonyított.
+	Voice:	Hang:
+	Until the next marker	A következő jelölőig

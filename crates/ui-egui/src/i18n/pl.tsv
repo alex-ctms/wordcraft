@@ -2727,3 +2727,16 @@ preview	Title	Tytuł
 	Write each replacement on its own line as: text = spoken as	Każdą zamianę wpisz w osobnym wierszu: tekst = wymowa
 	Read all of the address	Czytaj cały adres
 	Skip	Pomijaj
+	Read Aloud: voices	Czytanie na głos: głosy
+	Change the voice where a marker character starts the text	Zmieniaj głos, gdy tekst zaczyna się od znaku znacznika
+	Marker character:	Znak znacznika:
+	A marker changes the voice:	Znacznik zmienia głos:
+	To the end of the paragraph	Do końca akapitu
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Wpisz znacznik i etykietę głosu przed tekstem, na przykład §A Cześć. Aby wrócić do lektora, użyj §N lub §Narrator.
+	Label	Etykieta
+	System voice	Głos systemowy
+	Narrator	Lektor
+	Add a voice	Dodaj głos
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Pusty głos oznacza domyślny głos silnika. Szybkość jest względna wobec szybkości czytania.
+	Voice:	Głos:
+	Until the next marker	Do następnego znacznika

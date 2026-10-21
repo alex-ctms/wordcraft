@@ -1,7 +1,7 @@
 //! The Read Aloud player: a small floating window with previous / play-pause / next / stop,
-//! the paragraph or page being read, a speed slider, "Skip citations & bibliography" and a link
-//! to the settings (File › Options › Accessibility). Every control runs a command; the player
-//! itself is [`wordcraft_engine::speech::ReadAloud`].
+//! the voice reading and the paragraph or page being read, a speed slider, "Skip citations &
+//! bibliography" and a link to the settings (File › Options › Accessibility). Every control runs
+//! a command; the player itself is [`wordcraft_engine::speech::ReadAloud`].
 //!
 //! While reading, the caret follows the sentence being spoken (so stopping leaves it where
 //! reading stopped) and the sentence is highlighted on the page.
@@ -94,14 +94,23 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
             };
             ui.label(egui::RichText::new(what).color(t.text_dim).small());
         });
-        // Where in the document: "Paragraph 3 / 40".
+        // The voice reading, and where in the document: "Voice: A · Paragraph 3 / 40".
         let unit = match app.session.read_aloud.settings().chunk {
             Chunk::Paragraph => Some(tl!("Paragraph")),
             Chunk::Page => Some(tl!("Page")),
             Chunk::Document => None,
         };
-        if let Some(u) = unit.filter(|_| count > 0) {
-            ui.label(egui::RichText::new(format!("{u} {} / {chunks}", (chunk + 1).min(chunks))).color(t.text_dim).small());
+        let voice = app.session.read_aloud.voice();
+        if voice.is_some() || unit.is_some() {
+            let mut parts = Vec::new();
+            if let Some(v) = voice {
+                let v = if v == wordcraft_engine::speech::settings::NARRATOR { tl!("Narrator").to_string() } else { v };
+                parts.push(format!("{} {v}", tl!("Voice:")));
+            }
+            if let Some(u) = unit.filter(|_| count > 0) {
+                parts.push(format!("{u} {} / {chunks}", (chunk + 1).min(chunks)));
+            }
+            ui.label(egui::RichText::new(parts.join(" · ")).color(t.text_dim).small());
         }
         ui.add_space(6.0);
         // Speed: applied when the slider is let go, so dragging doesn't restart the sentence

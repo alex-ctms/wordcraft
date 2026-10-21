@@ -2722,3 +2722,16 @@ preview	Title	Naslov
 	Write each replacement on its own line as: text = spoken as	Svaku zamjenu napišite u zasebnom retku: tekst = izgovor
 	Read all of the address	Čitaj cijelu adresu
 	Skip	Preskoči
+	Read Aloud: voices	Čitanje naglas: glasovi
+	Change the voice where a marker character starts the text	Promijeni glas gdje znak oznake započinje tekst
+	Marker character:	Znak oznake:
+	A marker changes the voice:	Oznaka mijenja glas:
+	To the end of the paragraph	Do kraja odlomka
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Upišite oznaku i naziv glasa ispred teksta, na primjer §A Bok. Za povratak pripovjedaču koristite §N ili §Narrator.
+	Label	Naziv
+	System voice	Sistemski glas
+	Narrator	Pripovjedač
+	Add a voice	Dodaj glas
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Prazan glas koristi zadani glas pogona. Brzina je relativna u odnosu na brzinu čitanja.
+	Voice:	Glas:
+	Until the next marker	Do sljedeće oznake

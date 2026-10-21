@@ -2720,3 +2720,16 @@ preview	Title	Пример
 	Write each replacement on its own line as: text = spoken as	Пишите каждую замену на отдельной строке: текст = как произносить
 	Read all of the address	Читать адрес полностью
 	Skip	Пропускать
+	Read Aloud: voices	Чтение вслух: голоса
+	Change the voice where a marker character starts the text	Менять голос, если текст начинается с символа-маркера
+	Marker character:	Символ-маркер:
+	A marker changes the voice:	Маркер меняет голос:
+	To the end of the paragraph	До конца абзаца
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Введите маркер и метку голоса перед текстом, например §A Привет. Чтобы вернуться к рассказчику, используйте §N или §Narrator.
+	Label	Метка
+	System voice	Системный голос
+	Narrator	Рассказчик
+	Add a voice	Добавить голос
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Если голос не указан, используется голос движка по умолчанию. Скорость задаётся относительно скорости чтения.
+	Voice:	Голос:
+	Until the next marker	До следующего маркера

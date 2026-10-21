@@ -2714,3 +2714,16 @@ preview	Title	Ukázka
 	Write each replacement on its own line as: text = spoken as	Každou náhradu napište na samostatný řádek: text = výslovnost
 	Read all of the address	Číst celou adresu
 	Skip	Přeskočit
+	Read Aloud: voices	Čtení nahlas: hlasy
+	Change the voice where a marker character starts the text	Měnit hlas tam, kde text začíná znakem značky
+	Marker character:	Znak značky:
+	A marker changes the voice:	Značka mění hlas:
+	To the end of the paragraph	Do konce odstavce
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Před text napište značku a popisek hlasu, například §A Ahoj. Zpět k vypravěči se vrátíte pomocí §N nebo §Narrator.
+	Label	Popisek
+	System voice	Systémový hlas
+	Narrator	Vypravěč
+	Add a voice	Přidat hlas
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Prázdný hlas použije výchozí hlas modulu. Rychlost je vzhledem k rychlosti čtení.
+	Voice:	Hlas:
+	Until the next marker	Do další značky

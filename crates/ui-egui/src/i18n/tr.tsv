@@ -2719,3 +2719,16 @@ preview	Title	Örnek
 	Write each replacement on its own line as: text = spoken as	Her değiştirmeyi ayrı bir satıra yazın: metin = söyleniş
 	Read all of the address	Adresin tamamını oku
 	Skip	Atla
+	Read Aloud: voices	Sesli Okuma: sesler
+	Change the voice where a marker character starts the text	Metin bir işaretçi karakterle başladığında sesi değiştir
+	Marker character:	İşaretçi karakter:
+	A marker changes the voice:	İşaretçi sesi değiştirir:
+	To the end of the paragraph	Paragrafın sonuna kadar
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Metnin önüne işaretçiyi ve ses etiketini yazın, örneğin §A Merhaba. Anlatıcıya dönmek için §N veya §Narrator kullanın.
+	Label	Etiket
+	System voice	Sistem sesi
+	Narrator	Anlatıcı
+	Add a voice	Ses ekle
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Boş bir ses, motorun varsayılan sesini kullanır. Hız, okuma hızına görelidir.
+	Voice:	Ses:
+	Until the next marker	Sonraki işaretçiye kadar

@@ -37,6 +37,8 @@ const SETTINGS_PARAMS: &str = concat!(
     "{",
     r#""chunk"?: "paragraph|page|document" (read one paragraph, one page or all of it at a time)"#,
     r#", "text"?: {"urls"?: "read|domain|skip", "skipEmoji"?: bool, "skipSymbols"?: bool, "skipMarkup"?: bool, "skipBrackets"?: bool, "skipParentheses"?: bool, "collapseRepeats"?: bool, "skipChars"?: string, "replacements"?: [{"from": string, "to": string}], "skipPatterns"?: [regex]}"#,
+    r#", "voices"?: {"enabled"?: bool, "marker"?: one character (default §; "§A Hello." is read by Voice A), "scope"?: "paragraph|untilNext", "#,
+    r#""narrator"?: {"system"?: voice, "rate"?: 0.5…2}, "roles"?: [{"label": string, "system"?: voice, "rate"?: 0.5…2}]}"#,
     "} — changes the named settings (a bad value changes nothing) and returns them all; a reading in progress carries on from the same sentence.",
 );
 
@@ -336,6 +338,39 @@ mod tests {
         let r = s.run("readAloud.settings", &json!({"text": {"collapseRepeats": false, "skipSymbols": false}})).unwrap();
         assert_eq!(r["text"]["collapseRepeats"], false);
         assert_eq!(s.read_aloud.current().map(|u| u.text).as_deref(), Some("Bye ***** now."));
+    }
+
+    #[test]
+    fn voice_markers_and_text_rules_reach_the_reading() {
+        let mut s = Session::new(Document::from_text("Hi → there. §A Hello! §B: Bye ***** now.\nBack."));
+        s.run("readAloud.settings", &json!({"chunk": "document"})).unwrap();
+        s.run("review.readAloud", &json!({})).unwrap();
+        let mut got = Vec::new();
+        for _ in 0..4 {
+            let r = s.run("readAloud.status", &json!({})).unwrap();
+            got.push((r["current"]["text"].as_str().unwrap().to_string(), r["voice"].as_str().unwrap().to_string()));
+            s.run("readAloud.next", &json!({})).unwrap();
+        }
+        assert_eq!(
+            got,
+            [
+                ("Hi there.".to_string(), "Narrator".to_string()),
+                ("Hello!".into(), "A".into()),
+                ("Bye now.".into(), "B".into()),
+                ("Back.".into(), "Narrator".into())
+            ]
+        );
+        // The highlight is on the words as written, marker excluded.
+        s.run("readAloud.previous", &json!({})).unwrap();
+        s.run("readAloud.previous", &json!({})).unwrap();
+        let u = s.read_aloud.current().unwrap();
+        assert_eq!(s.doc.para_at(&u.start).unwrap().text.get(u.start.off..u.end.off), Some("Hello!"));
+        // Markers that last to the next one carry Voice B into the next paragraph.
+        s.run("readAloud.settings", &json!({"voices": {"scope": "untilNext"}})).unwrap();
+        s.run("readAloud.stop", &json!({})).unwrap();
+        s.sel = crate::Selection::caret(Pos::body(1, 0));
+        let r = s.run("review.readAloud", &json!({})).unwrap();
+        assert_eq!((r["current"]["text"].as_str(), r["voice"].as_str()), (Some("Back."), Some("B")));
     }
 
     #[test]

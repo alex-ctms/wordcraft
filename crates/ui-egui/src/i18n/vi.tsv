@@ -2762,3 +2762,16 @@ template	Letter	Thư
 	Write each replacement on its own line as: text = spoken as	Viết mỗi mục thay thế trên một dòng: văn bản = cách đọc
 	Read all of the address	Đọc toàn bộ địa chỉ
 	Skip	Bỏ qua
+	Read Aloud: voices	Đọc to: giọng
+	Change the voice where a marker character starts the text	Đổi giọng ở nơi văn bản bắt đầu bằng ký tự đánh dấu
+	Marker character:	Ký tự đánh dấu:
+	A marker changes the voice:	Dấu đánh dấu đổi giọng:
+	To the end of the paragraph	Đến hết đoạn văn
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Nhập dấu đánh dấu và nhãn giọng trước văn bản, ví dụ §A Xin chào. Dùng §N hoặc §Narrator để quay lại người dẫn chuyện.
+	Label	Nhãn
+	System voice	Giọng hệ thống
+	Narrator	Người dẫn chuyện
+	Add a voice	Thêm giọng
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Giọng để trống sẽ dùng giọng mặc định của bộ máy. Tốc độ tính theo tốc độ đọc.
+	Voice:	Giọng:
+	Until the next marker	Đến dấu đánh dấu tiếp theo

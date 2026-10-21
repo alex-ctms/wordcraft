@@ -2737,3 +2737,16 @@ preview	Title	Titel
 	Write each replacement on its own line as: text = spoken as	Skriv varje ersättning på en egen rad: text = uttal
 	Read all of the address	Läs hela adressen
 	Skip	Hoppa över
+	Read Aloud: voices	Uppläsning: röster
+	Change the voice where a marker character starts the text	Byt röst där ett markörtecken inleder texten
+	Marker character:	Markörtecken:
+	A marker changes the voice:	En markör byter röst:
+	To the end of the paragraph	Till slutet av stycket
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Skriv markören och röstens etikett före texten, till exempel §A Hej. Använd §N eller §Narrator för att gå tillbaka till berättaren.
+	Label	Etikett
+	System voice	Systemröst
+	Narrator	Berättare
+	Add a voice	Lägg till en röst
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	En tom röst använder motorns standardröst. Hastigheten är relativ till läshastigheten.
+	Voice:	Röst:
+	Until the next marker	Till nästa markör

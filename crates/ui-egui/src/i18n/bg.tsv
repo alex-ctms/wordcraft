@@ -2711,3 +2711,16 @@
 	Write each replacement on its own line as: text = spoken as	Пишете всяка замяна на отделен ред: текст = произношение
 	Read all of the address	Четене на целия адрес
 	Skip	Пропускане
+	Read Aloud: voices	Четене на глас: гласове
+	Change the voice where a marker character starts the text	Смяна на гласа, където маркерен знак започва текста
+	Marker character:	Маркерен знак:
+	A marker changes the voice:	Маркерът сменя гласа:
+	To the end of the paragraph	До края на абзаца
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Въведете маркера и етикета на гласа преди текста, например §A Здравей. Използвайте §N или §Narrator, за да се върнете към разказвача.
+	Label	Етикет
+	System voice	Системен глас
+	Narrator	Разказвач
+	Add a voice	Добавяне на глас
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Празен глас използва гласа по подразбиране на машината. Скоростта е спрямо скоростта на четене.
+	Voice:	Глас:
+	Until the next marker	До следващия маркер

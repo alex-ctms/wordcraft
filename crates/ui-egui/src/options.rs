@@ -454,6 +454,8 @@ fn accessibility(app: &mut WordApp, ui: &mut Ui) {
     read_aloud_chunk(app, ui);
     ui.add_space(8.0);
     read_aloud_text(app, ui);
+    ui.add_space(8.0);
+    read_aloud_voices(app, ui);
 }
 
 /// Change Read Aloud settings through `readAloud.settings` (the command agents use).
@@ -569,6 +571,92 @@ fn read_aloud_text(app: &mut WordApp, ui: &mut Ui) {
         ui.end_row();
     });
     note(ui, "The text on the page doesn't change. Only the spoken text does.");
+}
+
+/// Read Aloud › voice roles and the marker that switches them.
+fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
+    use wordcraft_engine::speech::Scope;
+    use wordcraft_engine::speech::settings::{MAX_ROLE_RATE, MAX_ROLES, MIN_ROLE_RATE};
+    let all = app.session.read_aloud.settings().to_json();
+    let v = app.session.read_aloud.settings().voices.clone();
+    section(ui, "Read Aloud: voices");
+    let mut enabled = v.enabled;
+    if ui.checkbox(&mut enabled, tl!("Change the voice where a marker character starts the text")).changed() {
+        speech(app, json!({"voices": {"enabled": enabled}}));
+    }
+    ui.add_enabled_ui(v.enabled, |ui| {
+        egui::Grid::new("read_aloud_marker").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+            ui.label(tl!("Marker character:"));
+            if let Some(m) = speech_field(ui, "voices.marker", &v.marker.to_string(), false, 40.0) {
+                speech(app, json!({"voices": {"marker": m}}));
+            }
+            ui.end_row();
+            ui.label(tl!("A marker changes the voice:"));
+            let name = |sc: Scope| match sc {
+                Scope::Paragraph => "To the end of the paragraph",
+                Scope::UntilNext => "Until the next marker",
+            };
+            egui::ComboBox::from_id_salt("read_aloud_scope").selected_text(tl!(name(v.scope))).width(220.0).show_ui(ui, |ui| {
+                for sc in [Scope::Paragraph, Scope::UntilNext] {
+                    if ui.selectable_label(v.scope == sc, tl!(name(sc))).clicked() && v.scope != sc {
+                        speech(app, json!({"voices": {"scope": sc.name()}}));
+                    }
+                }
+            });
+            ui.end_row();
+        });
+        note(ui, "Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.");
+        ui.add_space(4.0);
+        // Every role as `readAloud.settings` takes it: [narrator, role…].
+        let mut roles: Vec<Value> =
+            std::iter::once(all["voices"]["narrator"].clone()).chain(all["voices"]["roles"].as_array().cloned().unwrap_or_default()).collect();
+        let mut changed = false;
+        let mut remove = None;
+        egui::Grid::new("read_aloud_roles").num_columns(4).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+            for h in ["Label", "System voice", "Speed", ""] {
+                ui.label(RichText::new(tl!(h)).small().weak());
+            }
+            ui.end_row();
+            for (i, role) in roles.iter_mut().enumerate() {
+                if i == 0 {
+                    ui.label(tl!("Narrator"));
+                } else if let Some(t) = speech_field(ui, &format!("role{i}.label"), role["label"].as_str().unwrap_or(""), false, 80.0) {
+                    role["label"] = json!(t.trim());
+                    changed = true;
+                }
+                if let Some(t) = speech_field(ui, &format!("role{i}.system"), role["system"].as_str().unwrap_or(""), false, 120.0) {
+                    role["system"] = json!(t);
+                    changed = true;
+                }
+                let mut rate = role["rate"].as_f64().unwrap_or(1.0) as f32;
+                if ui.add(egui::DragValue::new(&mut rate).range(MIN_ROLE_RATE..=MAX_ROLE_RATE).speed(0.01).fixed_decimals(2).suffix("×")).changed() {
+                    role["rate"] = json!(rate);
+                    changed = true;
+                }
+                if i > 0 && ui.small_button(tl!("Remove")).clicked() {
+                    remove = Some(i);
+                }
+                ui.end_row();
+            }
+        });
+        if let Some(i) = remove {
+            roles.remove(i);
+            changed = true;
+        }
+        if roles.len() <= MAX_ROLES && ui.button(tl!("Add a voice")).clicked() {
+            // The first free letter: A, B, C…
+            let used: Vec<String> = roles.iter().filter_map(|r| r["label"].as_str().map(str::to_lowercase)).collect();
+            if let Some(label) = ('A'..='Z').map(String::from).find(|l| !used.contains(&l.to_lowercase())) {
+                roles.push(json!({"label": label}));
+                changed = true;
+            }
+        }
+        if changed {
+            let narrator = roles.first().cloned().unwrap_or(Value::Null);
+            speech(app, json!({"voices": {"narrator": narrator, "roles": roles.get(1..).unwrap_or(&[])}}));
+        }
+        note(ui, "An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.");
+    });
 }
 
 fn advanced(app: &mut WordApp, ui: &mut Ui) {

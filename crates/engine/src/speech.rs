@@ -21,6 +21,7 @@
 //! queue holds the sentences of the current chunk only, and the next chunk is loaded when the
 //! player gets to the end of it.
 //! The text rules ([`clean`]) take odd characters out of the spoken text.
+//! Voice markers ([`voices`]) give sentences to voice roles.
 
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 
@@ -30,8 +31,9 @@ use wordcraft_doc::{Document, InlineObject, Path, Pos, StoryRef};
 
 pub mod clean;
 pub mod settings;
+pub mod voices;
 
-pub use settings::{Chunk, SpeechSettings, TextRules, UrlMode};
+pub use settings::{Chunk, Scope, SpeechSettings, TextRules, UrlMode, Voices};
 
 /// Longest sentence handed to the speech program (longer ones are split at a space).
 const MAX_SENTENCE: usize = 600;
@@ -73,11 +75,13 @@ pub struct Utterance {
     pub end: Pos,
     /// The language to speak it in (a BCP 47 tag), or `None` for the system's default voice.
     pub lang: Option<String>,
+    /// The voice role that reads it: 0 is the Narrator (see [`voices`]).
+    pub role: usize,
 }
 
 impl Utterance {
     pub fn to_json(&self) -> Value {
-        json!({"text": self.text, "start": crate::cmd::pos_json(&self.start), "end": crate::cmd::pos_json(&self.end)})
+        json!({"text": self.text, "start": crate::cmd::pos_json(&self.start), "end": crate::cmd::pos_json(&self.end), "role": self.role})
     }
 }
 
@@ -88,6 +92,8 @@ pub struct ReadOptions<'a> {
     pub skip_citations: bool,
     /// The text rules; `None` keeps the text as written (only spaces and citation leftovers tidied).
     pub rules: Option<&'a TextRules>,
+    /// Voice markers; `None` reads everything with the Narrator.
+    pub voices: Option<&'a Voices>,
 }
 
 /// The citation and bibliography fields of `story` as (start, end) spans, both markers included.
@@ -104,7 +110,8 @@ pub fn sentences(doc: &Document, from: &Pos, to: Option<&Pos>, skip_citations: b
     sentences_with(doc, from, to, &ReadOptions { skip_citations, ..Default::default() })
 }
 
-/// [`sentences`] with the text rules of `opts`.
+/// [`sentences`] with the text rules and voice markers of `opts`. Markers last to the end of
+/// their paragraph here; [`Plan`] carries them on for [`Scope::UntilNext`].
 pub fn sentences_with(doc: &Document, from: &Pos, to: Option<&Pos>, opts: &ReadOptions) -> Vec<Utterance> {
     let story = from.story;
     let skipped = citation_spans(doc, story, opts.skip_citations);
@@ -120,7 +127,7 @@ pub fn sentences_with(doc: &Document, from: &Pos, to: Option<&Pos>, opts: &ReadO
         }
         let from_off = (path == from.path).then_some(from.off);
         let to_off = to.filter(|t| t.path == path).map(|t| t.off);
-        para_sentences(doc, story, &path, (from_off, to_off), &skipped, opts, &mut out);
+        para_sentences(doc, story, &path, (from_off, to_off), &skipped, opts, 0, &mut out);
         if out.len() >= MAX_SENTENCES {
             out.truncate(MAX_SENTENCES);
             break;
@@ -130,7 +137,9 @@ pub fn sentences_with(doc: &Document, from: &Pos, to: Option<&Pos>, opts: &ReadO
 }
 
 /// Add the sentences of the paragraph at `path` to `out`, from offset `range.0` up to `range.1`
-/// (the whole paragraph for `None`).
+/// (the whole paragraph for `None`), the paragraph starting in voice role `role`. Gives the role
+/// it ends in.
+#[allow(clippy::too_many_arguments)]
 fn para_sentences(
     doc: &Document,
     story: StoryRef,
@@ -138,13 +147,15 @@ fn para_sentences(
     range: (Option<usize>, Option<usize>),
     skipped: &[(Pos, Pos)],
     opts: &ReadOptions,
+    role: usize,
     out: &mut Vec<Utterance>,
-) {
-    let Some(para) = doc.para(story, path) else { return };
+) -> usize {
+    let Some(para) = doc.para(story, path) else { return role };
     let in_skipped = |p: &Pos| skipped.iter().any(|(a, b)| a <= p && p <= b);
-    // The spoken text, and for each char the paragraph offset it came from.
-    let mut text = String::new();
+    // The spoken text, and for each char the paragraph offset it came from and whether it is in range.
+    let mut chars: Vec<char> = Vec::new();
     let mut map: Vec<(usize, usize)> = Vec::new(); // (start, end) offsets in the paragraph
+    let mut in_range: Vec<bool> = Vec::new();
     let mut k = 0;
     for (off, c) in para.text.char_indices() {
         let end = off + c.len_utf8();
@@ -154,15 +165,14 @@ fn para_sentences(
         } else {
             None
         };
-        if range.0.is_some_and(|f| off < f) || range.1.is_some_and(|t| off >= t) {
-            continue;
-        }
+        let inside = !(range.0.is_some_and(|f| off < f) || range.1.is_some_and(|t| off >= t));
         if !skipped.is_empty() && in_skipped(&Pos::new(story, path.clone(), off)) {
             continue;
         }
         let mut push = |ch: char| {
-            text.push(ch);
+            chars.push(ch);
             map.push((off, end));
+            in_range.push(inside);
         };
         match obj {
             Some(InlineObject::Field { instr, .. }) if opts.skip_citations && is_citation_code(instr) => {}
@@ -171,25 +181,53 @@ fn para_sentences(
             None => push(if matches!(c, LINE_BREAK | PAGE_BREAK | COLUMN_BREAK | '\t') { ' ' } else { c }),
         }
     }
-    for (a, b) in split_sentences(&text) {
-        if out.len() >= MAX_SENTENCES {
-            return;
-        }
-        let piece: String = text.chars().skip(a).take(b - a).collect();
-        let spoken = match opts.rules {
-            Some(rules) => clean::clean(&piece, rules),
-            None => tidy(&piece),
-        };
-        if !spoken.chars().any(char::is_alphanumeric) {
+    let marked = match opts.voices {
+        Some(v) => voices::mark(&chars, v, role),
+        None => voices::Marked { roles: vec![role; chars.len()], spoken: vec![true; chars.len()], end: role },
+    };
+    // Runs of spoken, in-range characters read by one role: (role, indexes into `chars`).
+    let mut runs: Vec<(usize, Vec<usize>)> = Vec::new();
+    for i in 0..chars.len() {
+        if !in_range.get(i).copied().unwrap_or(false) || !marked.spoken.get(i).copied().unwrap_or(true) {
             continue;
         }
-        let (Some(first), Some(last)) = (map.get(a), map.get(b.saturating_sub(1))) else { continue };
-        // The language of the sentence's first character, through styles and the defaults.
-        let run = para.props_of_char(first.0);
-        let explicit = doc.styles.resolve_char(para.props.style.as_deref(), run).lang;
-        let lang = speech_language(&spoken, explicit.as_deref(), run.lang_bidi.as_deref());
-        out.push(Utterance { text: spoken, start: Pos::new(story, path.clone(), first.0), end: Pos::new(story, path.clone(), last.1), lang });
+        let r = marked.roles.get(i).copied().unwrap_or(role);
+        match runs.last_mut() {
+            Some((lr, idx)) if *lr == r => idx.push(i),
+            _ => runs.push((r, vec![i])),
+        }
     }
+    for (r, idx) in runs {
+        let text: String = idx.iter().filter_map(|i| chars.get(*i)).collect();
+        for (a, b) in split_sentences(&text) {
+            if out.len() >= MAX_SENTENCES {
+                return marked.end;
+            }
+            let piece: String = text.chars().skip(a).take(b - a).collect();
+            let spoken = match opts.rules {
+                Some(rules) => clean::clean(&piece, rules),
+                None => tidy(&piece),
+            };
+            if !spoken.chars().any(char::is_alphanumeric) {
+                continue;
+            }
+            let first = idx.get(a).and_then(|i| map.get(*i));
+            let last = b.checked_sub(1).and_then(|e| idx.get(e)).and_then(|i| map.get(*i));
+            let (Some(first), Some(last)) = (first, last) else { continue };
+            // The language of the sentence's first character, through styles and the defaults.
+            let run = para.props_of_char(first.0);
+            let explicit = doc.styles.resolve_char(para.props.style.as_deref(), run).lang;
+            let lang = speech_language(&spoken, explicit.as_deref(), run.lang_bidi.as_deref());
+            out.push(Utterance {
+                text: spoken,
+                start: Pos::new(story, path.clone(), first.0),
+                end: Pos::new(story, path.clone(), last.1),
+                lang,
+                role: r,
+            });
+        }
+    }
+    marked.end
 }
 
 /// What a reading covers, split into chunks: the paragraphs from the reading's start to its end,
@@ -202,6 +240,9 @@ pub struct Plan {
     pub starts: Vec<usize>,
     pub from: Pos,
     pub to: Option<Pos>,
+    /// The voice role each paragraph starts in (markers that last to the next marker); empty
+    /// when every paragraph starts with the Narrator.
+    pub roles: Vec<usize>,
     skipped: Vec<(Pos, Pos)>,
 }
 
@@ -218,7 +259,26 @@ impl Plan {
     ) -> Plan {
         let story = from.story;
         let all = doc.para_paths(story);
-        let paras: Vec<Path> = all.into_iter().filter(|p| *p >= from.path && !to.is_some_and(|t| *p > t.path)).collect();
+        let voices = &settings.voices;
+        let carry = voices.enabled && voices.scope == Scope::UntilNext;
+        let mut paras = Vec::new();
+        let mut roles = Vec::new();
+        let mut role = 0;
+        for path in all {
+            if to.is_some_and(|t| path > t.path) {
+                break;
+            }
+            let start_role = role;
+            if carry && let Some(p) = doc.para(story, &path) {
+                role = voices::end_role(&p.text, voices, role);
+            }
+            if path >= from.path {
+                paras.push(path);
+                if carry {
+                    roles.push(start_role);
+                }
+            }
+        }
         let starts = match settings.chunk {
             Chunk::Document => vec![0],
             Chunk::Paragraph => (0..paras.len()).collect(),
@@ -235,7 +295,7 @@ impl Plan {
                 (0..paras.len()).filter(|&i| i == 0 || pages.get(i).copied().flatten().is_none() || pages.get(i) != pages.get(i - 1)).collect()
             }
         };
-        Plan { story, paras, starts, from: from.clone(), to: to.cloned(), skipped: citation_spans(doc, story, skip_citations) }
+        Plan { story, paras, starts, from: from.clone(), to: to.cloned(), roles, skipped: citation_spans(doc, story, skip_citations) }
     }
 
     /// The number of chunks.
@@ -252,7 +312,8 @@ impl Plan {
             let Some(path) = self.paras.get(i) else { break };
             let from_off = (*path == self.from.path).then_some(self.from.off);
             let to_off = self.to.as_ref().filter(|t| t.path == *path).map(|t| t.off);
-            para_sentences(doc, self.story, path, (from_off, to_off), &self.skipped, opts, &mut out);
+            let role = self.roles.get(i).copied().unwrap_or(0);
+            para_sentences(doc, self.story, path, (from_off, to_off), &self.skipped, opts, role, &mut out);
             if out.len() >= MAX_SENTENCES {
                 break;
             }
@@ -374,12 +435,15 @@ fn voice_language(lang: Option<&str>, default: &str) -> Option<String> {
     lang.and_then(primary_tag).filter(|p| !p.eq_ignore_ascii_case(default))
 }
 
-/// The arguments of `espeak-ng`/`espeak`: the speed, the voice for `lang` unless it's English
-/// (espeak's default voice), and `--stdin`.
+/// The arguments of `espeak-ng`/`espeak`: the speed, the `voice` the user named (a voice role's)
+/// or else the voice for `lang` unless it's English (espeak's default voice), and `--stdin`.
 #[cfg(any(all(unix, not(target_os = "macos")), test))]
-fn espeak_args(wpm: &str, lang: Option<&str>) -> Vec<String> {
+fn espeak_args(wpm: &str, lang: Option<&str>, voice: Option<&str>) -> Vec<String> {
     let mut a = vec!["-s".to_string(), wpm.to_string()];
-    if let Some(p) = voice_language(lang, "en") {
+    if let Some(v) = voice.filter(|v| !v.starts_with('-')) {
+        a.push("-v".into());
+        a.push(v.to_string());
+    } else if let Some(p) = voice_language(lang, "en") {
         a.push("-v".into());
         a.push(p);
     }
@@ -640,7 +704,7 @@ impl Shared {
     fn load(&mut self, c: usize, forward: bool) -> bool {
         let found = {
             let Some(src) = &self.source else { return false };
-            let opts = ReadOptions { skip_citations: src.skip_citations, rules: Some(&self.settings.text) };
+            let opts = ReadOptions { skip_citations: src.skip_citations, rules: Some(&self.settings.text), voices: Some(&self.settings.voices) };
             let mut at = c;
             loop {
                 if at >= src.plan.chunks() {
@@ -855,6 +919,10 @@ impl ReadAloud {
     pub fn error(&self) -> Option<String> {
         lock(&self.shared.0).error.clone()
     }
+    /// The label of the voice role reading the current sentence.
+    pub fn voice(&self) -> Option<String> {
+        self.current().map(|u| self.settings.voices.label(u.role).to_string())
+    }
 
     pub fn status(&self) -> Value {
         let s = lock(&self.shared.0);
@@ -870,6 +938,7 @@ impl ReadAloud {
             "rate": s.rate,
             "skipCitations": self.skip_citations,
             "current": current.map(Utterance::to_json),
+            "voice": current.map(|u| s.settings.voices.label(u.role)),
             "error": s.error,
         })
     }
@@ -921,11 +990,17 @@ enum Spoken {
     Failed(String),
 }
 
+/// The speed of a sentence: the reading speed times its role's.
+fn role_rate(rate: f32, role: f32) -> f32 {
+    let r = rate * role;
+    if r.is_finite() { r.clamp(MIN_RATE, MAX_RATE) } else { 1.0 }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 fn worker(shared: &(Mutex<Shared>, Condvar), backend: Backend) {
     let (m, cv) = shared;
     loop {
-        let (u, generation, rate) = {
+        let (u, generation, rate, settings) = {
             let mut s = lock(m);
             while s.state == State::Paused {
                 s = cv.wait(s).unwrap_or_else(PoisonError::into_inner);
@@ -935,7 +1010,7 @@ fn worker(shared: &(Mutex<Shared>, Condvar), backend: Backend) {
                 return;
             }
             match s.queue.get(s.index) {
-                Some(u) => (u.clone(), s.generation, s.rate),
+                Some(u) => (u.clone(), s.generation, s.rate, Arc::clone(&s.settings)),
                 None => {
                     s.state = State::Stopped;
                     s.running = false;
@@ -944,8 +1019,11 @@ fn worker(shared: &(Mutex<Shared>, Condvar), backend: Backend) {
             }
         };
         let changed = || lock(m).generation != generation;
+        let (voice, factor) = settings.role_voice(u.role);
+        let rate = role_rate(rate, factor);
+        let voice = Some(voice).filter(|v| !v.is_empty());
         let outcome = match backend {
-            Backend::System => speak(&u.text, u.lang.as_deref(), rate, &changed),
+            Backend::System => speak(&u.text, u.lang.as_deref(), voice, rate, &changed),
             Backend::Instant => Spoken::Done,
             Backend::Hold => {
                 let mut s = lock(m);
@@ -1006,18 +1084,23 @@ struct WindowsSpeech {
 }
 
 #[cfg(any(target_os = "windows", test))]
-fn windows_speech(system_root: Option<std::ffi::OsString>, rate: f32, lang: Option<&str>) -> WindowsSpeech {
+fn windows_speech(system_root: Option<std::ffi::OsString>, rate: f32, lang: Option<&str>, named: bool) -> WindowsSpeech {
     // SAPI rate: -10 (a third of normal speed) … 10 (three times).
     let r = ((rate.ln() / 3f32.ln()) * 10.0).round().clamp(-10.0, 10.0) as i64;
     // The voice of the sentence's language, when one is installed (the default voice would spell
     // out Cyrillic, Greek… letters one by one), but only when the user's default voice doesn't
     // speak that language already, in any region. The tag is `primary_tag`-clean, so it can't end
-    // the quote.
-    let voice = lang.and_then(primary_tag).map_or_else(String::new, |p| {
+    // the quote. A voice the user named (a voice role's) comes in the environment, so its name is
+    // never part of the script; a name SAPI doesn't know fails, and the default voice reads.
+    let voice = if named {
+        "if ($env:WORDCRAFT_VOICE) { try { $s.SelectVoice($env:WORDCRAFT_VOICE) } catch { exit 3 } }; ".to_string()
+    } else {
+        lang.and_then(primary_tag).map_or_else(String::new, |p| {
         format!(
             "if ($s.Voice.Culture.TwoLetterISOLanguageName -ne '{p}') {{ $v = $s.GetInstalledVoices() | Where-Object {{ $_.Enabled -and $_.VoiceInfo.Culture.TwoLetterISOLanguageName -eq '{p}' }} | Select-Object -First 1; if ($v) {{ $s.SelectVoice($v.VoiceInfo.Name) }} }}; "
-        )
-    });
+            )
+        })
+    };
     // The sentence arrives on stdin as UTF-8 bytes; `[Console]::In` would decode them with the
     // console's code page (Cyrillic became `?` and the voice read single letters), so read the raw
     // stream and decode it as UTF-8. The text itself is never part of the script.
@@ -1033,21 +1116,22 @@ fn windows_speech(system_root: Option<std::ffi::OsString>, rate: f32, lang: Opti
     }
 }
 
-/// Speak one sentence with the system's speech program, stopping early when `changed()`. When
-/// the program fails with the sentence's voice, the default voice says it instead.
+/// Speak one sentence with the system's speech program, stopping early when `changed()`: in the
+/// `voice` the user named, else in `lang`'s voice. When the program fails with that voice, the
+/// default voice says it instead.
 #[cfg(not(target_arch = "wasm32"))]
-fn speak(text: &str, lang: Option<&str>, rate: f32, changed: &dyn Fn() -> bool) -> Spoken {
-    let (spoken, gave_voice, exited_ok) = speak_with(text, lang, rate, changed);
+fn speak(text: &str, lang: Option<&str>, voice: Option<&str>, rate: f32, changed: &dyn Fn() -> bool) -> Spoken {
+    let (spoken, gave_voice, exited_ok) = speak_with(text, lang, voice, rate, changed);
     if retry_without_voice(gave_voice, exited_ok) {
-        return speak_with(text, None, rate, changed).0;
+        return speak_with(text, None, None, rate, changed).0;
     }
     spoken
 }
 
-/// [`speak`] in `lang`'s voice once: how it ended, whether the program was given a voice, and
+/// [`speak`] in one voice once: how it ended, whether the program was given a voice, and
 /// whether it exited successfully (`None` when it didn't exit on its own).
 #[cfg(not(target_arch = "wasm32"))]
-fn speak_with(text: &str, lang: Option<&str>, rate: f32, changed: &dyn Fn() -> bool) -> (Spoken, bool, Option<bool>) {
+fn speak_with(text: &str, lang: Option<&str>, named: Option<&str>, rate: f32, changed: &dyn Fn() -> bool) -> (Spoken, bool, Option<bool>) {
     use std::io::Write;
     use std::process::{Command, Stdio};
     let wpm = ((BASE_WPM * rate).round() as i64).to_string();
@@ -1058,7 +1142,10 @@ fn speak_with(text: &str, lang: Option<&str>, rate: f32, changed: &dyn Fn() -> b
     {
         let mut c = Command::new("say");
         c.args(["-r", &wpm]);
-        let voice = lang.and_then(|l| mac_voice(l, mac_voice_listing(), mac_default_voice_language()));
+        let voice = named
+            .filter(|v| !v.starts_with('-'))
+            .map(str::to_string)
+            .or_else(|| lang.and_then(|l| mac_voice(l, mac_voice_listing(), mac_default_voice_language())));
         if let Some(voice) = &voice {
             c.args(["-v", voice.as_str()]);
         }
@@ -1066,23 +1153,26 @@ fn speak_with(text: &str, lang: Option<&str>, rate: f32, changed: &dyn Fn() -> b
     }
     #[cfg(target_os = "windows")]
     {
-        let w = windows_speech(std::env::var_os("SystemRoot"), rate, lang);
+        let w = windows_speech(std::env::var_os("SystemRoot"), rate, lang, named.is_some());
         let mut c = Command::new(&w.program);
         c.args(&w.args);
+        if let Some(v) = named {
+            c.env("WORDCRAFT_VOICE", v);
+        }
         std::os::windows::process::CommandExt::creation_flags(&mut c, w.creation_flags);
-        tries.push((c, lang.and_then(primary_tag).is_some()));
+        tries.push((c, named.is_some() || lang.and_then(primary_tag).is_some()));
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
         for prog in ["espeak-ng", "espeak"] {
-            let args = espeak_args(&wpm, lang);
+            let args = espeak_args(&wpm, lang, named);
             let voiced = args.iter().any(|a| a == "-v");
             let mut c = Command::new(prog);
             c.args(args);
             tries.push((c, voiced));
         }
     }
-    let _ = (&wpm, lang);
+    let _ = (&wpm, lang, named);
     let mut child = None;
     let mut last_err = String::from("no speech program on this system");
     for (mut c, voiced) in tries {
@@ -1141,12 +1231,12 @@ mod tests {
         // The flags `speak` passes to `creation_flags` (std can't read them back from the
         // `Command`): Win32's CREATE_NO_WINDOW (0x0800_0000), or every sentence flashes a
         // console (#1122).
-        let w = windows_speech(Some("D:\\Win".into()), 1.0, None);
+        let w = windows_speech(Some("D:\\Win".into()), 1.0, None, false);
         assert_eq!(w.creation_flags, 0x0800_0000);
         assert_eq!(w.program, windows_powershell(Some("D:\\Win".into())));
         assert_eq!(w.args[..3], ["-NoProfile", "-NonInteractive", "-Command"]);
         assert!(w.args[3].contains("$s.Rate = 0;"), "{}", w.args[3]);
-        assert!(windows_speech(None, 3.0, None).args[3].contains("$s.Rate = 10;"));
+        assert!(windows_speech(None, 3.0, None, false).args[3].contains("$s.Rate = 10;"));
     }
 
     #[test]
@@ -1347,38 +1437,48 @@ mod tests {
 
     #[test]
     fn windows_script_reads_utf8_and_picks_the_voice() {
-        let w = windows_speech(None, 1.0, Some("ru"));
+        let w = windows_speech(None, 1.0, Some("ru"), false);
         let script = &w.args[3];
         assert!(script.contains("UTF8"), "{script}");
         assert!(script.contains("GetInstalledVoices") && script.contains("SelectVoice"), "{script}");
         assert!(script.contains("'ru'"), "{script}");
         // The default voice when the language is unknown, and no voice code at all.
-        let d = windows_speech(None, 1.0, None);
+        let d = windows_speech(None, 1.0, None, false);
         assert!(d.args[3].contains("UTF8") && !d.args[3].contains("SelectVoice"), "{}", d.args[3]);
         // The sentence is never in the script: it arrives on stdin.
-        assert!(!windows_speech(None, 1.0, Some("ru-RU")).args[3].contains("Привет"));
+        assert!(!windows_speech(None, 1.0, Some("ru-RU"), false).args[3].contains("Привет"));
         // A tag that isn't a plain language tag is dropped, not put in the script.
-        let h = windows_speech(None, 1.0, Some("ru'; Remove-Item x; '"));
+        let h = windows_speech(None, 1.0, Some("ru'; Remove-Item x; '"), false);
         assert!(!h.args[3].contains("Remove-Item"), "{}", h.args[3]);
     }
 
     #[test]
     fn espeak_gets_the_language() {
-        assert_eq!(espeak_args("180", Some("ru-RU")), ["-s", "180", "-v", "ru", "--stdin"]);
-        assert_eq!(espeak_args("180", Some("uk")), ["-s", "180", "-v", "uk", "--stdin"]);
-        assert_eq!(espeak_args("180", None), ["-s", "180", "--stdin"]);
-        assert_eq!(espeak_args("180", Some("--evil")), ["-s", "180", "--stdin"]);
+        assert_eq!(espeak_args("180", Some("ru-RU"), None), ["-s", "180", "-v", "ru", "--stdin"]);
+        assert_eq!(espeak_args("180", Some("uk"), None), ["-s", "180", "-v", "uk", "--stdin"]);
+        assert_eq!(espeak_args("180", None, None), ["-s", "180", "--stdin"]);
+        assert_eq!(espeak_args("180", Some("--evil"), None), ["-s", "180", "--stdin"]);
+    }
+
+    #[test]
+    fn a_voice_role_names_the_system_voice() {
+        // espeak: the role's voice wins over the language's, and never as an option.
+        assert_eq!(espeak_args("180", Some("ru"), Some("en-gb")), ["-s", "180", "-v", "en-gb", "--stdin"]);
+        assert_eq!(espeak_args("180", Some("ru"), Some("-x")), ["-s", "180", "-v", "ru", "--stdin"]);
+        // Windows: the name comes in the environment, never in the script.
+        let w = windows_speech(None, 1.0, Some("ru"), true);
+        assert!(w.args[3].contains("$env:WORDCRAFT_VOICE") && !w.args[3].contains("'ru'"), "{}", w.args[3]);
     }
 
     #[test]
     fn english_text_keeps_the_default_voice() {
         // Word writes `en-US` on almost every run: espeak's default voice is English already, so
         // no `-v` (as before #1843), and Word's language-less `x-none` is no voice either.
-        assert_eq!(espeak_args("180", Some("en-US")), ["-s", "180", "--stdin"]);
-        assert_eq!(espeak_args("180", Some("en-GB")), ["-s", "180", "--stdin"]);
-        assert_eq!(espeak_args("180", Some("x-none")), ["-s", "180", "--stdin"]);
+        assert_eq!(espeak_args("180", Some("en-US"), None), ["-s", "180", "--stdin"]);
+        assert_eq!(espeak_args("180", Some("en-GB"), None), ["-s", "180", "--stdin"]);
+        assert_eq!(espeak_args("180", Some("x-none"), None), ["-s", "180", "--stdin"]);
         // Windows: the user's default voice stays when it already speaks the language, any region.
-        let script = &windows_speech(None, 1.0, Some("en-US")).args[3];
+        let script = &windows_speech(None, 1.0, Some("en-US"), false).args[3];
         let guard = script.find("if ($s.Voice.Culture.TwoLetterISOLanguageName -ne 'en')");
         let pick = script.find("GetInstalledVoices");
         assert!(guard.is_some() && pick.is_some() && guard < pick, "{script}");

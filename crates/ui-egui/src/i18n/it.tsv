@@ -2731,3 +2731,16 @@ preview	Title	Esempio
 	Write each replacement on its own line as: text = spoken as	Scrivi ogni sostituzione su una riga: testo = pronuncia
 	Read all of the address	Leggi tutto l'indirizzo
 	Skip	Salta
+	Read Aloud: voices	Lettura ad alta voce: voci
+	Change the voice where a marker character starts the text	Cambia la voce dove un carattere marcatore inizia il testo
+	Marker character:	Carattere marcatore:
+	A marker changes the voice:	Un marcatore cambia la voce:
+	To the end of the paragraph	Fino alla fine del paragrafo
+	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Digita il marcatore e l'etichetta della voce prima del testo, ad esempio §A Ciao. Usa §N o §Narrator per tornare al narratore.
+	Label	Etichetta
+	System voice	Voce di sistema
+	Narrator	Narratore
+	Add a voice	Aggiungi una voce
+	An empty voice uses the voice the engine has by default. The speed is relative to the reading speed.	Una voce vuota usa la voce predefinita del motore. La velocità è relativa alla velocità di lettura.
+	Voice:	Voce:
+	Until the next marker	Fino al marcatore successivo
