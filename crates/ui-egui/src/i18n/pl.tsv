@@ -2732,7 +2732,7 @@ preview	Title	Tytuł
 	Marker character:	Znak znacznika:
 	A marker changes the voice:	Znacznik zmienia głos:
 	To the end of the paragraph	Do końca akapitu
-	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Wpisz znacznik i etykietę głosu przed tekstem, na przykład §A Cześć. Aby wrócić do lektora, użyj §N lub §Narrator.
+	Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator.	Wpisz znacznik i etykietę głosu przed tekstem, na przykład {marker}A Cześć. Aby wrócić do lektora, użyj {marker}N lub {marker}Narrator.
 	Label	Etykieta
 	System voice	Głos systemowy
 	Narrator	Lektor

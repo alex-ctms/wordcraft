@@ -605,7 +605,10 @@ fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
             });
             ui.end_row();
         });
-        note(ui, "Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.");
+        // The examples use the marker the user chose.
+        let marker = v.marker.to_string();
+        let help = crate::i18n::fmt(tl!("Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator."), &[("marker", &marker)]);
+        ui.label(RichText::new(help).small().weak());
         ui.add_space(4.0);
         // Every role as `readAloud.settings` takes it: [narrator, role…].
         let mut roles: Vec<Value> =

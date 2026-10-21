@@ -2719,7 +2719,7 @@ preview	Title	Ukázka
 	Marker character:	Znak značky:
 	A marker changes the voice:	Značka mění hlas:
 	To the end of the paragraph	Do konce odstavce
-	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Před text napište značku a popisek hlasu, například §A Ahoj. Zpět k vypravěči se vrátíte pomocí §N nebo §Narrator.
+	Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator.	Před text napište značku a popisek hlasu, například {marker}A Ahoj. Zpět k vypravěči se vrátíte pomocí {marker}N nebo {marker}Narrator.
 	Label	Popisek
 	System voice	Systémový hlas
 	Narrator	Vypravěč

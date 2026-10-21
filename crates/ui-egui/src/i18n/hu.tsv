@@ -2723,7 +2723,7 @@
 	Marker character:	Jelölő karakter:
 	A marker changes the voice:	A jelölő váltja a hangot:
 	To the end of the paragraph	A bekezdés végéig
-	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Írja a jelölőt és a hangcímkét a szöveg elé, például §A Szia. A narrátorhoz a §N vagy a §Narrator jelölővel térhet vissza.
+	Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator.	Írja a jelölőt és a hangcímkét a szöveg elé, például {marker}A Szia. A narrátorhoz a {marker}N vagy a {marker}Narrator jelölővel térhet vissza.
 	Label	Címke
 	System voice	Rendszerhang
 	Narrator	Narrátor

@@ -2727,7 +2727,7 @@ preview	Title	Naslov
 	Marker character:	Znak oznake:
 	A marker changes the voice:	Oznaka mijenja glas:
 	To the end of the paragraph	Do kraja odlomka
-	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Upišite oznaku i naziv glasa ispred teksta, na primjer §A Bok. Za povratak pripovjedaču koristite §N ili §Narrator.
+	Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator.	Upišite oznaku i naziv glasa ispred teksta, na primjer {marker}A Bok. Za povratak pripovjedaču koristite {marker}N ili {marker}Narrator.
 	Label	Naziv
 	System voice	Sistemski glas
 	Narrator	Pripovjedač

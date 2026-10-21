@@ -2736,7 +2736,7 @@ preview	Title	Esempio
 	Marker character:	Carattere marcatore:
 	A marker changes the voice:	Un marcatore cambia la voce:
 	To the end of the paragraph	Fino alla fine del paragrafo
-	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Digita il marcatore e l'etichetta della voce prima del testo, ad esempio §A Ciao. Usa §N o §Narrator per tornare al narratore.
+	Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator.	Digita il marcatore e l'etichetta della voce prima del testo, ad esempio {marker}A Ciao. Usa {marker}N o {marker}Narrator per tornare al narratore.
 	Label	Etichetta
 	System voice	Voce di sistema
 	Narrator	Narratore

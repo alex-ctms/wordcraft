@@ -2716,7 +2716,7 @@
 	Marker character:	Маркерен знак:
 	A marker changes the voice:	Маркерът сменя гласа:
 	To the end of the paragraph	До края на абзаца
-	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Въведете маркера и етикета на гласа преди текста, например §A Здравей. Използвайте §N или §Narrator, за да се върнете към разказвача.
+	Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator.	Въведете маркера и етикета на гласа преди текста, например {marker}A Здравей. Използвайте {marker}N или {marker}Narrator, за да се върнете към разказвача.
 	Label	Етикет
 	System voice	Системен глас
 	Narrator	Разказвач

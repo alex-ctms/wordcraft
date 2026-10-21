@@ -2724,7 +2724,7 @@ preview	Title	Örnek
 	Marker character:	İşaretçi karakter:
 	A marker changes the voice:	İşaretçi sesi değiştirir:
 	To the end of the paragraph	Paragrafın sonuna kadar
-	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Metnin önüne işaretçiyi ve ses etiketini yazın, örneğin §A Merhaba. Anlatıcıya dönmek için §N veya §Narrator kullanın.
+	Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator.	Metnin önüne işaretçiyi ve ses etiketini yazın, örneğin {marker}A Merhaba. Anlatıcıya dönmek için {marker}N veya {marker}Narrator kullanın.
 	Label	Etiket
 	System voice	Sistem sesi
 	Narrator	Anlatıcı

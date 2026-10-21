@@ -2767,7 +2767,7 @@ template	Letter	Thư
 	Marker character:	Ký tự đánh dấu:
 	A marker changes the voice:	Dấu đánh dấu đổi giọng:
 	To the end of the paragraph	Đến hết đoạn văn
-	Type the marker and the voice label before the text, for example §A Hello. Use §N or §Narrator to go back to the narrator.	Nhập dấu đánh dấu và nhãn giọng trước văn bản, ví dụ §A Xin chào. Dùng §N hoặc §Narrator để quay lại người dẫn chuyện.
+	Type the marker and the voice label before the text, for example {marker}A Hello. Use {marker}N or {marker}Narrator to go back to the narrator.	Nhập dấu đánh dấu và nhãn giọng trước văn bản, ví dụ {marker}A Xin chào. Dùng {marker}N hoặc {marker}Narrator để quay lại người dẫn chuyện.
 	Label	Nhãn
 	System voice	Giọng hệ thống
 	Narrator	Người dẫn chuyện
