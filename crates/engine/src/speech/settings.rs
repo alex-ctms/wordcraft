@@ -4,6 +4,7 @@
 //! `readAloud.settings` and `ui.json` both go through [`SpeechSettings::apply`] and
 //! [`SpeechSettings::to_json`]. The values come from agents and from files, so they are hostile:
 //! every string is capped, every number clamped, and a bad value is an error that changes nothing.
+//! The cloud API key is never kept here: only the name of the environment variable that holds it.
 
 use serde_json::{Map, Value, json};
 
@@ -15,7 +16,7 @@ pub const MAX_ROLES: usize = 26;
 pub const MAX_LABEL: usize = 24;
 /// Longest voice name, in characters.
 const MAX_VOICE: usize = 64;
-/// Longest program, path or argument, in characters.
+/// Longest program, path, endpoint or argument, in characters.
 const MAX_FIELD: usize = 2048;
 /// Most arguments of the local voice program.
 const MAX_ARGS: usize = 32;
@@ -41,6 +42,8 @@ pub enum Engine {
     System,
     /// A local neural voice program, Piper by default; it writes a WAV file.
     Local,
+    /// An OpenAI-compatible `/v1/audio/speech` service.
+    Cloud,
 }
 
 /// How much is read, and rendered ahead, at one time.
@@ -85,7 +88,7 @@ macro_rules! names {
         }
     };
 }
-names!(Engine { System = "system", Local = "local" });
+names!(Engine { System = "system", Local = "local", Cloud = "cloud" });
 names!(Chunk { Paragraph = "paragraph", Page = "page", Document = "document" });
 names!(UrlMode { Read = "read", Domain = "domain", Skip = "skip" });
 names!(Scope { Paragraph = "paragraph", UntilNext = "untilNext" });
@@ -106,6 +109,28 @@ impl Default for LocalVoice {
             program: "piper".into(),
             args: ["--model", "{voice}", "--output_file", "{output}", "--length_scale", "{lengthScale}"].map(String::from).to_vec(),
             voice: String::new(),
+        }
+    }
+}
+
+/// The cloud voice service.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CloudVoice {
+    pub endpoint: String,
+    pub model: String,
+    /// The default voice.
+    pub voice: String,
+    /// The environment variable that holds the API key.
+    pub api_key_env: String,
+}
+
+impl Default for CloudVoice {
+    fn default() -> Self {
+        CloudVoice {
+            endpoint: "https://api.openai.com/v1/audio/speech".into(),
+            model: "tts-1".into(),
+            voice: "alloy".into(),
+            api_key_env: "OPENAI_API_KEY".into(),
         }
     }
 }
@@ -163,13 +188,14 @@ pub struct Role {
     /// The voice for each engine; empty keeps the engine's default voice.
     pub system: String,
     pub local: String,
+    pub cloud: String,
     /// Speed relative to the reading speed.
     pub rate: f32,
 }
 
 impl Role {
     fn new(label: &str) -> Role {
-        Role { label: label.into(), system: String::new(), local: String::new(), rate: 1.0 }
+        Role { label: label.into(), system: String::new(), local: String::new(), cloud: String::new(), rate: 1.0 }
     }
 }
 
@@ -213,6 +239,7 @@ pub struct SpeechSettings {
     pub engine: Engine,
     pub chunk: Chunk,
     pub local: LocalVoice,
+    pub cloud: CloudVoice,
     pub text: TextRules,
     pub voices: Voices,
 }
@@ -277,6 +304,23 @@ fn voice_name(v: &Value, key: &str, max: usize) -> Result<Option<String>, CmdErr
     Ok(s)
 }
 
+/// Is `url` an endpoint text may be sent to: `https://`, or `http://` to this computer only.
+pub fn endpoint_ok(url: &str) -> bool {
+    let lower = url.to_ascii_lowercase();
+    let local = ["http://localhost", "http://127.0.0.1", "http://[::1]"]
+        .iter()
+        .any(|p| lower.strip_prefix(p).is_some_and(|rest| rest.is_empty() || rest.starts_with([':', '/'])));
+    (lower.starts_with("https://") && lower.len() > 8 || local) && !url.chars().any(|c| c.is_whitespace() || c.is_control() || c == '"')
+}
+
+/// Is `name` a plain environment variable name (`OPENAI_API_KEY`)?
+pub fn env_name_ok(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && name.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
 /// Is `label` a role label: letters, digits and `_`, 1 to [`MAX_LABEL`] characters.
 pub fn label_ok(label: &str) -> bool {
     let n = label.chars().count();
@@ -305,8 +349,10 @@ pub enum Origin {
     /// The user, in File › Options, or the settings saved in `ui.json`.
     User,
     /// A command (`readAloud.settings` from the control channel, MCP, the CLI or a script). A
-    /// command may not choose the program WordCraft runs (`local.program`, `local.args`): any
-    /// client that can send commands could otherwise make WordCraft run any program.
+    /// command may not choose the program WordCraft runs (`local.program`, `local.args`), where
+    /// text and the API key go (`cloud.endpoint`, `cloud.apiKeyEnv`), or switch the cloud voice
+    /// on: any client that can send commands could otherwise run any program, or send the
+    /// document and the key to its own server.
     Command,
 }
 
@@ -351,6 +397,27 @@ impl SpeechSettings {
                 s.local.voice = x;
             }
         }
+        if let Some(c) = object(v, "cloud")? {
+            let c = Value::Object(c.clone());
+            if let Some(e) = string(&c, "endpoint", MAX_FIELD)? {
+                if !endpoint_ok(&e) {
+                    return Err(bad("`cloud.endpoint` must start with https:// (or http://localhost)"));
+                }
+                s.cloud.endpoint = e;
+            }
+            if let Some(m) = voice_name(&c, "model", MAX_VOICE)? {
+                s.cloud.model = m;
+            }
+            if let Some(x) = voice_name(&c, "voice", MAX_VOICE)? {
+                s.cloud.voice = x;
+            }
+            if let Some(k) = string(&c, "apiKeyEnv", 64)? {
+                if !env_name_ok(&k) {
+                    return Err(bad("`cloud.apiKeyEnv` must be an environment variable name such as OPENAI_API_KEY"));
+                }
+                s.cloud.api_key_env = k;
+            }
+        }
         if let Some(t) = object(v, "text")? {
             s.text = text_rules(&Value::Object(t.clone()), s.text)?;
         }
@@ -370,6 +437,14 @@ impl SpeechSettings {
                 return Err(bad(format!(
                     "the voice `{v}` may only have letters, digits and . _ / \\ : - when set by a command: set it in File › Options › Accessibility"
                 )));
+            }
+            if s.cloud.endpoint != self.cloud.endpoint || s.cloud.api_key_env != self.cloud.api_key_env {
+                return Err(bad(
+                    "`cloud.endpoint` and `cloud.apiKeyEnv` choose where the text and the API key go: change them in File › Options › Accessibility",
+                ));
+            }
+            if s.engine == Engine::Cloud && self.engine != Engine::Cloud {
+                return Err(bad("the cloud voice sends the document's text to a service: switch it on in File › Options › Accessibility"));
             }
         }
         *self = s;
@@ -393,12 +468,13 @@ impl SpeechSettings {
     }
 
     pub fn to_json(&self) -> Value {
-        let role = |r: &Role| json!({"label": r.label, "system": r.system, "local": r.local, "rate": r.rate});
+        let role = |r: &Role| json!({"label": r.label, "system": r.system, "local": r.local, "cloud": r.cloud, "rate": r.rate});
         let t = &self.text;
         json!({
             "engine": self.engine.name(),
             "chunk": self.chunk.name(),
             "local": {"program": self.local.program, "args": self.local.args, "voice": self.local.voice},
+            "cloud": {"endpoint": self.cloud.endpoint, "model": self.cloud.model, "voice": self.cloud.voice, "apiKeyEnv": self.cloud.api_key_env},
             "text": {
                 "urls": t.urls.name(),
                 "skipEmoji": t.skip_emoji,
@@ -428,6 +504,7 @@ impl SpeechSettings {
         let voice = r.map_or("", |r| match self.engine {
             Engine::System => r.system.as_str(),
             Engine::Local => r.local.as_str(),
+            Engine::Cloud => r.cloud.as_str(),
         });
         (voice, r.map_or(1.0, |r| r.rate))
     }
@@ -506,6 +583,9 @@ fn role(v: &Value, mut r: Role) -> Result<Role, CmdError> {
     if let Some(x) = voice_name(v, "local", MAX_FIELD)? {
         r.local = x;
     }
+    if let Some(x) = voice_name(v, "cloud", MAX_VOICE)? {
+        r.cloud = x;
+    }
     if let Some(x) = rate(v, "rate")? {
         r.rate = x;
     }
@@ -579,11 +659,12 @@ mod tests {
     #[test]
     fn apply_changes_only_what_is_named() {
         let mut s = SpeechSettings::default();
-        s.apply(&json!({"chunk": "page"})).unwrap();
-        assert_eq!(s.chunk, Chunk::Page);
+        s.apply_from(&json!({"engine": "cloud", "chunk": "page", "cloud": {"voice": "nova"}}), Origin::User).unwrap();
+        assert_eq!((s.engine, s.chunk, s.cloud.voice.as_str()), (Engine::Cloud, Chunk::Page, "nova"));
+        assert_eq!(s.cloud.model, "tts-1");
         s.apply(&json!({"text": {"skipEmoji": true}})).unwrap();
         assert!(s.text.skip_emoji && s.text.skip_symbols);
-        s.apply(&json!({"voices": {"marker": "^", "scope": "untilNext", "roles": [{"label": "Anna", "system": "en-gb", "rate": 9}]}})).unwrap();
+        s.apply(&json!({"voices": {"marker": "^", "scope": "untilNext", "roles": [{"label": "Anna", "cloud": "shimmer", "rate": 9}]}})).unwrap();
         assert_eq!(s.voices.marker, '^');
         assert_eq!(s.voices.roles.len(), 2);
         assert_eq!(s.voices.role_of("anna"), Some(1));
@@ -602,6 +683,9 @@ mod tests {
             json!({"chunk": 3}),
             json!({"engine": "telepathy"}),
             json!({"engine": "local", "chunk": 3}),
+            json!({"cloud": {"endpoint": "http://example.com/speech"}}),
+            json!({"cloud": {"endpoint": "file:///etc/passwd"}}),
+            json!({"cloud": {"apiKeyEnv": "A B"}}),
             json!({"local": {"program": "--evil"}}),
             json!({"local": {"args": [1]}}),
             json!({"voices": {"marker": "ab"}}),
@@ -625,7 +709,13 @@ mod tests {
     #[test]
     fn commands_cannot_choose_the_program_or_where_text_goes() {
         let mut s = SpeechSettings::default();
-        for bad in [json!({"local": {"program": "/bin/sh"}}), json!({"local": {"args": ["-c", "rm -rf ~"]}})] {
+        for bad in [
+            json!({"local": {"program": "/bin/sh"}}),
+            json!({"local": {"args": ["-c", "rm -rf ~"]}}),
+            json!({"cloud": {"endpoint": "https://attacker.example/v1/audio/speech"}}),
+            json!({"cloud": {"apiKeyEnv": "AWS_SECRET_ACCESS_KEY"}}),
+            json!({"engine": "cloud"}),
+        ] {
             assert!(s.apply(&bad).is_err(), "{bad}");
             assert_eq!(s, SpeechSettings::default(), "{bad}");
         }
@@ -646,11 +736,30 @@ mod tests {
         s = SpeechSettings::default();
         // The settings as read back, unchanged, are fine, and so is everything else.
         s.apply(&SpeechSettings::default().to_json()).unwrap();
-        s.apply(&json!({"engine": "local", "local": {"voice": "/voices/a.onnx"}})).unwrap();
+        s.apply(&json!({"engine": "local", "local": {"voice": "/voices/a.onnx"}, "cloud": {"voice": "nova", "model": "tts-1-hd"}})).unwrap();
         // The user may change them (File › Options, `ui.json`).
-        s.apply_from(&json!({"local": {"program": "/opt/piper/piper"}}), Origin::User).unwrap();
-        assert_eq!((s.engine, s.local.program.as_str()), (Engine::Local, "/opt/piper/piper"));
+        s.apply_from(
+            &json!({"engine": "cloud", "local": {"program": "/opt/piper/piper"}, "cloud": {"endpoint": "http://localhost:8000/v1/audio/speech"}}),
+            Origin::User,
+        )
+        .unwrap();
+        assert_eq!((s.engine, s.local.program.as_str()), (Engine::Cloud, "/opt/piper/piper"));
         assert_eq!(SpeechSettings::load(&s.to_json()), s);
+        // Once the user has switched the cloud voice on, a command may leave it on, or switch it off.
+        s.apply(&json!({"engine": "cloud", "chunk": "page"})).unwrap();
+        s.apply(&json!({"engine": "system"})).unwrap();
+        assert!(s.apply(&json!({"engine": "cloud"})).is_err());
+    }
+
+    #[test]
+    fn endpoints_must_be_https_or_this_computer() {
+        assert!(endpoint_ok("https://api.openai.com/v1/audio/speech"));
+        assert!(endpoint_ok("http://localhost:8000/v1/audio/speech"));
+        assert!(endpoint_ok("http://127.0.0.1/v1/audio/speech"));
+        assert!(!endpoint_ok("http://localhost.evil.com/x"));
+        assert!(!endpoint_ok("https://"));
+        assert!(!endpoint_ok("https://a b"));
+        assert!(!endpoint_ok("ftp://x"));
     }
 
     #[test]
@@ -666,8 +775,10 @@ mod tests {
     #[test]
     fn role_voice_follows_the_engine() {
         let mut s = SpeechSettings::default();
-        s.apply(&json!({"voices": {"roles": [{"label": "A", "system": "Daniel", "rate": 1.2}]}})).unwrap();
+        s.apply(&json!({"voices": {"roles": [{"label": "A", "system": "Daniel", "cloud": "echo", "rate": 1.2}]}})).unwrap();
         assert_eq!(s.role_voice(1), ("Daniel", 1.2));
+        s.engine = Engine::Cloud;
+        assert_eq!(s.role_voice(1).0, "echo");
         assert_eq!(s.role_voice(0).0, "");
         assert_eq!(s.role_voice(99), ("", 1.0));
     }

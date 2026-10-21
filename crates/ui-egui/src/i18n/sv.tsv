@@ -2766,3 +2766,11 @@ preview	Title	Titel
 	Voice model:	Röstmodell:
 	Arguments (one per line):	Argument (ett per rad):
 	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Röstmodellen är sökvägen till en Piper .onnx-fil. I argumenten fylls {voice}, {output}, {rate} och {lengthScale} i för varje mening.
+	Cloud voice	Molnröst
+	Cloud voice (sends the text to a service)	Molnröst (skickar texten till en tjänst)
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	En naturlig röst från en OpenAI-kompatibel taltjänst. Texten som läses skickas till tjänsten.
+	Model:	Modell:
+	API key variable:	Variabel för API-nyckel:
+	The API key is set.	API-nyckeln är angiven.
+	The API key is not set. Set it in this environment variable before you start WordCraft.	API-nyckeln är inte angiven. Ange den i den här miljövariabeln innan du startar WordCraft.
+	The cloud voice sends the text being read to the address above. WordCraft never saves the API key.	Molnrösten skickar texten som läses till adressen ovan. WordCraft sparar aldrig API-nyckeln.

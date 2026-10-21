@@ -285,7 +285,7 @@ pub struct UiState {
     pub read_aloud_skip_citations: bool,
     /// Read Aloud's voice engine, reading unit, text rules and voice roles, as
     /// [`wordcraft_engine::speech::SpeechSettings::to_json`] writes them (a damaged entry keeps its
-    /// default).
+    /// default). The cloud API key is never in it.
     pub read_aloud_settings: serde_json::Value,
     /// Show ribbon and Quick Access Toolbar KeyTips on Alt/F10 (#620).
     pub keytips_enabled: bool,

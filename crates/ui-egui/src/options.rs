@@ -466,8 +466,9 @@ fn speech(app: &mut WordApp, params: Value) {
     }
 }
 
-/// Change Read Aloud settings that only the user may change: the program WordCraft runs. Commands
-/// can't ([`wordcraft_engine::speech::settings::Origin`]), so the pane changes them directly.
+/// Change Read Aloud settings that only the user may change: the program WordCraft runs, where
+/// the cloud voice sends text and the API key, and switching the cloud voice on. Commands can't
+/// ([`wordcraft_engine::speech::settings::Origin`]), so the pane changes them directly.
 fn speech_user(app: &mut WordApp, params: Value) {
     if let Err(e) = wordcraft_engine::cmd::speech::apply_user_settings(&mut app.session, &params) {
         app.status(e.to_string());
@@ -499,8 +500,8 @@ enum VoicePick {
     Browse,
 }
 
-/// The voices `readAloud.voices` found for `engine` (`system`, `local`), as (id, label). The list
-/// is asked for once, when the pane first shows.
+/// The voices `readAloud.voices` found for `engine` (`system`, `local`, `cloud`, `cloudModels`),
+/// as (id, label). The list is asked for once, when the pane first shows.
 fn voice_choices(app: &mut WordApp, engine: &str) -> Vec<(String, String)> {
     if app.read_aloud_voices.is_none() {
         app.read_aloud_voices = Some(app.run("readAloud.voices", json!({})).unwrap_or_default());
@@ -563,6 +564,11 @@ fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
             "Neural voice on this computer (Piper)",
             "A natural voice that runs on this computer. Install Piper and a voice model first.",
         ),
+        (
+            Engine::Cloud,
+            "Cloud voice (sends the text to a service)",
+            "A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.",
+        ),
     ] {
         if ui.radio(s.engine == engine, tl!(label)).on_hover_text(tl!(tip)).clicked() && s.engine != engine {
             speech_user(app, json!({"engine": engine.name()}));
@@ -595,6 +601,40 @@ fn read_aloud_engine(app: &mut WordApp, ui: &mut Ui) {
                 ui,
                 "The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.",
             );
+        }
+        Engine::Cloud => {
+            egui::Grid::new("read_aloud_cloud").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+                for (label, key, value, list) in [
+                    ("Address:", "endpoint", &s.cloud.endpoint, None),
+                    ("Model:", "model", &s.cloud.model, Some("cloudModels")),
+                    ("Voice:", "voice", &s.cloud.voice, Some("cloud")),
+                    ("API key variable:", "apiKeyEnv", &s.cloud.api_key_env, None),
+                ] {
+                    ui.label(tl!(label));
+                    let picked = match list {
+                        Some(engine) => {
+                            let found = voice_choices(app, engine);
+                            match voice_field(ui, &format!("cloud.{key}"), value, &found, 300.0, false) {
+                                Some(VoicePick::Set(t)) => Some(t),
+                                _ => None,
+                            }
+                        }
+                        None => speech_field(ui, &format!("cloud.{key}"), value, false, 320.0),
+                    };
+                    if let Some(t) = picked {
+                        speech_user(app, json!({"cloud": { key: t }}));
+                    }
+                    ui.end_row();
+                }
+            });
+            let found = std::env::var(&s.cloud.api_key_env).is_ok_and(|k| !k.trim().is_empty());
+            let msg = if found {
+                tl!("The API key is set.")
+            } else {
+                tl!("The API key is not set. Set it in this environment variable before you start WordCraft.")
+            };
+            ui.label(RichText::new(msg).small());
+            note(ui, "The cloud voice sends the text being read to the address above. WordCraft never saves the API key.");
         }
         Engine::System => {}
     }
@@ -732,15 +772,15 @@ fn read_aloud_voices(app: &mut WordApp, ui: &mut Ui) {
         if ui.button(tl!("Find voices again")).on_hover_text(tl!("Ask the speech program and the voice folders for their voices again")).clicked() {
             app.read_aloud_voices = Some(app.run("readAloud.voices", json!({"refresh": true})).unwrap_or_default());
         }
-        let lists = [("system", voice_choices(app, "system")), ("local", voice_choices(app, "local"))];
+        let lists = [("system", voice_choices(app, "system")), ("local", voice_choices(app, "local")), ("cloud", voice_choices(app, "cloud"))];
         let mut browse_role = None;
         // Every role as `readAloud.settings` takes it: [narrator, role…].
         let mut roles: Vec<Value> =
             std::iter::once(all["voices"]["narrator"].clone()).chain(all["voices"]["roles"].as_array().cloned().unwrap_or_default()).collect();
         let mut changed = false;
         let mut remove = None;
-        egui::Grid::new("read_aloud_roles").num_columns(5).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
-            for h in ["Label", "System voice", "Neural voice", "Speed", ""] {
+        egui::Grid::new("read_aloud_roles").num_columns(6).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+            for h in ["Label", "System voice", "Neural voice", "Cloud voice", "Speed", ""] {
                 ui.label(RichText::new(tl!(h)).small().weak());
             }
             ui.end_row();

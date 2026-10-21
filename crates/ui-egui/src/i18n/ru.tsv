@@ -2749,3 +2749,11 @@ preview	Title	Пример
 	Voice model:	Модель голоса:
 	Arguments (one per line):	Аргументы (по одному в строке):
 	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Модель голоса — путь к файлу Piper .onnx. В аргументах {voice}, {output}, {rate} и {lengthScale} заполняются для каждого предложения.
+	Cloud voice	Облачный голос
+	Cloud voice (sends the text to a service)	Облачный голос (текст отправляется в службу)
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Естественный голос из службы речи, совместимой с OpenAI. Читаемый текст отправляется в эту службу.
+	Model:	Модель:
+	API key variable:	Переменная с ключом API:
+	The API key is set.	Ключ API задан.
+	The API key is not set. Set it in this environment variable before you start WordCraft.	Ключ API не задан. Задайте его в этой переменной среды перед запуском WordCraft.
+	The cloud voice sends the text being read to the address above. WordCraft never saves the API key.	Облачный голос отправляет читаемый текст по указанному выше адресу. WordCraft никогда не сохраняет ключ API.

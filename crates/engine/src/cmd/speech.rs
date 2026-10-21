@@ -29,7 +29,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .pure(),
         CommandSpec::new("readAloud.settings", "Read Aloud Settings", "Review › Speech", settings).params(SETTINGS_PARAMS).pure(),
         CommandSpec::new("readAloud.voices", "Read Aloud Voices", "Review › Speech", voices)
-            .params(r#"{"refresh"?: bool (ask the speech program again)} — the voices to pick from: {"system": [{"id", "label"}] (the system speech program's), "local": [...] (Piper .onnx models in the folders of the models in use and the usual download folders)}; the settings also take any other name or path"#)
+            .params(r#"{"refresh"?: bool (ask the speech program again)} — the voices to pick from: {"system": [{"id", "label"}] (the system speech program's), "local": [...] (Piper .onnx models in the folders of the models in use and the usual download folders), "cloud": [...] and "cloudModels": [...] (an OpenAI-compatible service's)}; the settings also take any other name or path"#)
             .pure(),
         CommandSpec::new("readAloud.status", "Read Aloud Status", "Review › Speech", status).pure(),
         CommandSpec::new("caret.pastCitation", "Move Past Citation", "Zotero › Citations", past_citation).pure(),
@@ -38,14 +38,15 @@ pub fn specs() -> Vec<CommandSpec> {
 
 const SETTINGS_PARAMS: &str = concat!(
     "{",
-    r#""engine"?: "system|local" (local: Piper or another program that writes a WAV file), "#,
+    r#""engine"?: "system|local|cloud" (local: Piper or another program that writes a WAV file; cloud: an OpenAI-compatible /v1/audio/speech service, which gets the text being read), "#,
     r#""chunk"?: "paragraph|page|document" (read and render one paragraph, one page or all of it at a time)"#,
     r#", "local"?: {"program"?: string, "args"?: [string] ({voice} {output} {rate} {lengthScale} are filled in), "voice"?: string (Piper: the .onnx model)}"#,
+    r#", "cloud"?: {"endpoint"?: "https://…", "model"?: string, "voice"?: string, "apiKeyEnv"?: string (the environment variable with the API key; the key is never saved)}"#,
     r#", "text"?: {"urls"?: "read|domain|skip", "skipEmoji"?: bool, "skipSymbols"?: bool, "skipMarkup"?: bool, "skipBrackets"?: bool, "skipParentheses"?: bool, "collapseRepeats"?: bool, "skipChars"?: string, "replacements"?: [{"from": string, "to": string}], "skipPatterns"?: [regex]}"#,
     r#", "voices"?: {"enabled"?: bool, "marker"?: one character (default §; "§A Hello." is read by Voice A), "scope"?: "paragraph|untilNext", "#,
-    r#""narrator"?: {"system"?, "local"?: voice, "rate"?: 0.5…2}, "roles"?: [{"label": string, "system"?, "local"?: voice, "rate"?: 0.5…2}]}"#,
+    r#""narrator"?: {"system"?, "local"?, "cloud"?: voice, "rate"?: 0.5…2}, "roles"?: [{"label": string, "system"?, "local"?, "cloud"?: voice, "rate"?: 0.5…2}]}"#,
     "} — changes the named settings (a bad value changes nothing) and returns them all; a reading in progress carries on from the same sentence.",
-    " `local.program` and `local.args` can't be changed: only the user can, in File › Options › Accessibility.",
+    " `local.program`, `local.args`, `cloud.endpoint` and `cloud.apiKeyEnv` can't be changed, nor the cloud voice switched on: only the user can, in File › Options › Accessibility.",
 );
 
 /// Start reading from the caret (or the selection); while reading, pause or carry on.
@@ -164,14 +165,17 @@ fn skip_citations(s: &mut Session, v: &Value) -> CmdResult {
 
 /// The voices each engine can use, for the settings' lists.
 fn voices(s: &mut Session, v: &Value) -> CmdResult {
-    use crate::speech::neural::{self, VoiceChoice};
+    use crate::speech::neural::{self, CLOUD_MODELS, CLOUD_VOICES, VoiceChoice};
     let set = s.read_aloud.settings();
     let mut known: Vec<&str> = vec![set.local.voice.as_str()];
     known.extend(set.voices.roles.iter().map(|r| r.local.as_str()));
     let list = |v: Vec<VoiceChoice>| v.iter().map(VoiceChoice::to_json).collect::<Vec<_>>();
+    let named = |names: &[&str]| names.iter().map(|n| serde_json::json!({"id": n, "label": n})).collect::<Vec<_>>();
     Ok(serde_json::json!({
         "system": list(neural::system_voices(p::bool(v, "refresh").unwrap_or(false))),
         "local": list(neural::piper_models(&neural::piper_dirs(&known))),
+        "cloud": named(CLOUD_VOICES),
+        "cloudModels": named(CLOUD_MODELS),
     }))
 }
 
@@ -432,6 +436,10 @@ mod tests {
         // A command can't choose the program WordCraft runs.
         assert!(s.run("readAloud.settings", &json!({"local": {"program": "/bin/sh"}})).is_err());
         assert_eq!(s.read_aloud.settings().local.program, "piper");
+        // Nor where text and the key go, or switch the cloud voice on.
+        for bad in [json!({"cloud": {"endpoint": "https://example.com/x"}}), json!({"engine": "cloud"})] {
+            assert!(s.run("readAloud.settings", &bad).is_err(), "{bad}");
+        }
     }
 
     #[test]
@@ -449,6 +457,8 @@ mod tests {
         let mut s = Session::new(Document::from_text("x"));
         let r = s.run("readAloud.voices", &json!({"refresh": true})).unwrap();
         assert!(r["system"].is_array() && r["local"].is_array());
+        assert!(r["cloud"].as_array().unwrap().iter().any(|v| v["id"] == "nova"));
+        assert!(r["cloudModels"].as_array().unwrap().iter().any(|v| v["id"] == "tts-1"));
     }
 
     #[test]

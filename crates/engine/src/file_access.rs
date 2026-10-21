@@ -442,7 +442,7 @@ mod tests {
     /// The host-enabled recovery store owns its profile files; commands address known snapshot
     /// IDs, never paths. Only that storage module is exempt, not recovery commands in general.
     /// Read Aloud's neural voices (`speech/neural.rs`) write and delete only their own temporary
-    /// audio files, named by the module itself, and list the voice folders.
+    /// audio and request files, named by the module itself, and list the voice folders.
     #[test]
     fn commands_do_not_touch_the_file_system_themselves() {
         fn walk(dir: &Path, files: &mut Vec<PathBuf>) {

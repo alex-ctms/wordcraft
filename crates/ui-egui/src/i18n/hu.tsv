@@ -2747,3 +2747,11 @@
 	Voice model:	Hangmodell:
 	Arguments (one per line):	Argumentumok (soronként egy):
 	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	A hangmodell egy Piper .onnx fájl elérési útja. Az argumentumokban a {voice}, {output}, {rate} és {lengthScale} minden mondatnál kitöltődik.
+	Cloud voice	Felhőhang
+	Cloud voice (sends the text to a service)	Felhőhang (a szöveget egy szolgáltatásnak küldi)
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Természetes hang egy OpenAI-kompatibilis beszédszolgáltatásból. A felolvasott szöveg a szolgáltatáshoz kerül.
+	Model:	Modell:
+	API key variable:	API-kulcs változója:
+	The API key is set.	Az API-kulcs be van állítva.
+	The API key is not set. Set it in this environment variable before you start WordCraft.	Az API-kulcs nincs beállítva. Állítsa be ebben a környezeti változóban, mielőtt elindítja a WordCraftot.
+	The cloud voice sends the text being read to the address above. WordCraft never saves the API key.	A felhőhang a felolvasott szöveget a fenti címre küldi. A WordCraft soha nem menti az API-kulcsot.

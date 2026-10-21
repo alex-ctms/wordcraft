@@ -2791,3 +2791,11 @@ template	Letter	Thư
 	Voice model:	Mô hình giọng:
 	Arguments (one per line):	Đối số (mỗi dòng một mục):
 	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Mô hình giọng là đường dẫn tới tệp Piper .onnx. Trong các đối số, {voice}, {output}, {rate} và {lengthScale} được điền cho từng câu.
+	Cloud voice	Giọng đám mây
+	Cloud voice (sends the text to a service)	Giọng đám mây (gửi văn bản tới một dịch vụ)
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Giọng tự nhiên từ một dịch vụ giọng nói tương thích OpenAI. Văn bản đang đọc được gửi tới dịch vụ đó.
+	Model:	Mô hình:
+	API key variable:	Biến khóa API:
+	The API key is set.	Đã đặt khóa API.
+	The API key is not set. Set it in this environment variable before you start WordCraft.	Chưa đặt khóa API. Hãy đặt nó trong biến môi trường này trước khi khởi động WordCraft.
+	The cloud voice sends the text being read to the address above. WordCraft never saves the API key.	Giọng đám mây gửi văn bản đang đọc tới địa chỉ ở trên. WordCraft không bao giờ lưu khóa API.

@@ -17,10 +17,10 @@
 //! sentence, and moves on when it finishes. Commands only change the shared state and wake the
 //! worker, which stops the running sentence when the state changed under it.
 //!
-//! With a neural voice ([`Engine::Local`], see [`neural`]) a second thread renders the sentences
-//! of the current paragraph or page to WAV files ahead of the player, and the player plays them.
-//! A sentence that can't be rendered is read by the system voice, so a missing program never
-//! means silence.
+//! With a neural voice ([`Engine::Local`] or [`Engine::Cloud`], see [`neural`]) a second thread
+//! renders the sentences of the current paragraph or page to WAV files ahead of the player, and
+//! the player plays them. A sentence that can't be rendered is read by the system voice, so a
+//! missing program or a network error never means silence.
 //!
 //! The document is read one chunk at a time ([`Chunk`]: a paragraph, a page or all of it): the
 //! queue holds the sentences of the current chunk only, and the next chunk is loaded when the
@@ -1255,6 +1255,27 @@ fn render(settings: &SpeechSettings, voice: &str, rate: f32, text: &str, changed
                 }
             },
         },
+        Engine::Cloud => {
+            let body = match neural::temp_file("json") {
+                Ok(p) => p,
+                Err(e) => return Some(Clip::Failed(e)),
+            };
+            let key = std::env::var(&settings.cloud.api_key_env).ok();
+            let r = neural::write_request(&body, neural::cloud_body(&settings.cloud, voice, rate, text))
+                .map_err(|e| format!("couldn't write the cloud voice request: {e}"))
+                .and_then(|()| neural::cloud_run(&settings.cloud, key.as_deref(), &body, &out))
+                .map(|r| neural::run(&r, changed));
+            neural::remove(&body);
+            match r {
+                Err(e) => Err(e),
+                Ok(Ran::Exited(true)) if neural::has_audio(&out) => Ok(()),
+                Ok(Ran::Exited(_)) => {
+                    Err("the cloud voice service refused the request or didn't answer (check the address, API key, model and voice)".into())
+                }
+                Ok(Ran::Interrupted) => Err(String::new()),
+                Ok(Ran::NotStarted(e)) => Err(format!("couldn't start curl for the cloud voice ({e})")),
+            }
+        }
     };
     match result {
         Ok(()) => Some(Clip::Ready(out)),

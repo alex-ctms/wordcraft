@@ -2740,3 +2740,11 @@
 	Voice model:	Гласов модел:
 	Arguments (one per line):	Аргументи (по един на ред):
 	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Гласовият модел е пътят до файл Piper .onnx. В аргументите {voice}, {output}, {rate} и {lengthScale} се попълват за всяко изречение.
+	Cloud voice	Облачен глас
+	Cloud voice (sends the text to a service)	Облачен глас (изпраща текста до услуга)
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Естествен глас от услуга за реч, съвместима с OpenAI. Четеният текст се изпраща до тази услуга.
+	Model:	Модел:
+	API key variable:	Променлива с API ключ:
+	The API key is set.	API ключът е зададен.
+	The API key is not set. Set it in this environment variable before you start WordCraft.	API ключът не е зададен. Задайте го в тази променлива на средата, преди да стартирате WordCraft.
+	The cloud voice sends the text being read to the address above. WordCraft never saves the API key.	Облачният глас изпраща четения текст на адреса по-горе. WordCraft никога не запазва API ключа.

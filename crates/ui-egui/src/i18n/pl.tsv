@@ -2756,3 +2756,11 @@ preview	Title	Tytuł
 	Voice model:	Model głosu:
 	Arguments (one per line):	Argumenty (jeden w wierszu):
 	The voice model is the path of a Piper .onnx file. In the arguments, {voice}, {output}, {rate} and {lengthScale} are filled in for each sentence.	Model głosu to ścieżka do pliku Piper .onnx. W argumentach {voice}, {output}, {rate} i {lengthScale} są wypełniane dla każdego zdania.
+	Cloud voice	Głos w chmurze
+	Cloud voice (sends the text to a service)	Głos w chmurze (wysyła tekst do usługi)
+	A natural voice from an OpenAI-compatible speech service. The text being read is sent to that service.	Naturalny głos z usługi mowy zgodnej z OpenAI. Czytany tekst jest wysyłany do tej usługi.
+	Model:	Model:
+	API key variable:	Zmienna z kluczem API:
+	The API key is set.	Klucz API jest ustawiony.
+	The API key is not set. Set it in this environment variable before you start WordCraft.	Klucz API nie jest ustawiony. Ustaw go w tej zmiennej środowiskowej przed uruchomieniem WordCraft.
+	The cloud voice sends the text being read to the address above. WordCraft never saves the API key.	Głos w chmurze wysyła czytany tekst na powyższy adres. WordCraft nigdy nie zapisuje klucza API.
