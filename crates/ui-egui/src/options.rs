@@ -452,12 +452,31 @@ fn accessibility(app: &mut WordApp, ui: &mut Ui) {
         let _ = app.run("readAloud.skipCitations", json!({"value": skip}));
     }
     read_aloud_chunk(app, ui);
+    ui.add_space(8.0);
+    read_aloud_text(app, ui);
 }
 
 /// Change Read Aloud settings through `readAloud.settings` (the command agents use).
 fn speech(app: &mut WordApp, params: Value) {
     if let Err(e) = app.run("readAloud.settings", params) {
         app.status(e);
+    }
+}
+
+/// A text field for a Read Aloud setting: what is typed is applied when the field loses focus
+/// (or Enter is pressed), so a half-typed value (a pattern, an address) isn't tried on every key.
+/// Returns the text to apply.
+fn speech_field(ui: &mut Ui, id: &str, current: &str, multiline: bool, width: f32) -> Option<String> {
+    let id = egui::Id::new(("read-aloud-field", id));
+    let mut text = ui.data(|d| d.get_temp::<String>(id)).unwrap_or_else(|| current.to_string());
+    let edit = if multiline { egui::TextEdit::multiline(&mut text).desired_rows(3) } else { egui::TextEdit::singleline(&mut text) };
+    let r = ui.add(edit.desired_width(width));
+    if r.has_focus() {
+        ui.data_mut(|d| d.insert_temp(id, text));
+        None
+    } else {
+        ui.data_mut(|d| d.remove::<String>(id));
+        (r.lost_focus() && text != current).then_some(text)
     }
 }
 
@@ -482,6 +501,67 @@ fn read_aloud_chunk(app: &mut WordApp, ui: &mut Ui) {
         });
     });
     note(ui, "Read Aloud prepares and reads this much text, then goes on to the next part.");
+}
+
+/// Read Aloud › what is skipped or changed in the text.
+fn read_aloud_text(app: &mut WordApp, ui: &mut Ui) {
+    use wordcraft_engine::speech::UrlMode;
+    let t = app.session.read_aloud.settings().text.clone();
+    section(ui, "Read Aloud: text");
+    ui.horizontal(|ui| {
+        ui.label(tl!("Web addresses:"));
+        let name = |m: UrlMode| match m {
+            UrlMode::Read => "Read all of the address",
+            UrlMode::Domain => "Read the site name only",
+            UrlMode::Skip => "Skip",
+        };
+        egui::ComboBox::from_id_salt("read_aloud_urls").selected_text(tl!(name(t.urls))).width(220.0).show_ui(ui, |ui| {
+            for m in [UrlMode::Read, UrlMode::Domain, UrlMode::Skip] {
+                if ui.selectable_label(t.urls == m, tl!(name(m))).clicked() && t.urls != m {
+                    speech(app, json!({"text": {"urls": m.name()}}));
+                }
+            }
+        });
+    });
+    for (label, key, value) in [
+        ("Skip emoji", "skipEmoji", t.skip_emoji),
+        ("Skip symbols (arrows, boxes, bullets, icon characters)", "skipSymbols", t.skip_symbols),
+        ("Skip markup characters (* # _ ~ | ^ ` < > = \\)", "skipMarkup", t.skip_markup),
+        ("Skip text in [square brackets]", "skipBrackets", t.skip_brackets),
+        ("Skip text in (parentheses)", "skipParentheses", t.skip_parentheses),
+        ("Skip repeated punctuation (*****, -----)", "collapseRepeats", t.collapse_repeats),
+    ] {
+        let mut v = value;
+        if ui.checkbox(&mut v, tl!(label)).changed() {
+            speech(app, json!({"text": { key: v }}));
+        }
+    }
+    egui::Grid::new("read_aloud_text").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+        ui.label(tl!("Characters to skip:"));
+        if let Some(c) = speech_field(ui, "text.skipChars", &t.skip_chars, false, 320.0) {
+            speech(app, json!({"text": {"skipChars": c}}));
+        }
+        ui.end_row();
+        ui.label(tl!("Say instead (one per line, text = spoken as):"));
+        let current: Vec<String> = t.replacements.iter().map(|(f, to)| format!("{f} = {to}")).collect();
+        if let Some(text) = speech_field(ui, "text.replacements", &current.join("\n"), true, 320.0) {
+            let list: Vec<Value> = text
+                .lines()
+                .filter_map(|l| l.split_once(" = ").or_else(|| l.split_once('=')))
+                .filter(|(f, _)| !f.trim().is_empty())
+                .map(|(f, to)| json!({"from": f.trim(), "to": to.trim()}))
+                .collect();
+            speech(app, json!({"text": {"replacements": list}}));
+        }
+        ui.end_row();
+        ui.label(tl!("Skip text that matches (regular expressions, one per line):"));
+        if let Some(text) = speech_field(ui, "text.skipPatterns", &t.skip_patterns.join("\n"), true, 320.0) {
+            let list: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+            speech(app, json!({"text": {"skipPatterns": list}}));
+        }
+        ui.end_row();
+    });
+    note(ui, "The text on the page doesn't change. Only the spoken text does.");
 }
 
 fn advanced(app: &mut WordApp, ui: &mut Ui) {

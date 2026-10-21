@@ -2746,3 +2746,18 @@ template	Letter	Thư
 	The whole document	Toàn bộ tài liệu
 	Read Aloud settings…	Cài đặt đọc to…
 	Read Aloud prepares and reads this much text, then goes on to the next part.	Đọc to chuẩn bị và đọc chừng này văn bản, rồi chuyển sang phần tiếp theo.
+	Read Aloud: text	Đọc to: văn bản
+	Web addresses:	Địa chỉ web:
+	Read the site name only	Chỉ đọc tên trang web
+	Skip emoji	Bỏ qua biểu tượng cảm xúc
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	Bỏ qua ký tự định dạng (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Bỏ qua dấu câu lặp lại (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Bỏ qua ký hiệu (mũi tên, hộp, dấu đầu dòng, ký tự biểu tượng)
+	Skip text in (parentheses)	Bỏ qua văn bản trong (ngoặc đơn)
+	Skip text in [square brackets]	Bỏ qua văn bản trong [ngoặc vuông]
+	Skip text that matches (regular expressions, one per line):	Bỏ qua văn bản khớp (biểu thức chính quy, mỗi dòng một mục):
+	Characters to skip:	Ký tự bỏ qua:
+	Say instead (one per line, text = spoken as):	Nói thay bằng (mỗi dòng một mục, văn bản = cách đọc):
+	The text on the page doesn't change. Only the spoken text does.	Văn bản trên trang không thay đổi. Chỉ văn bản được đọc thay đổi.
+	Read all of the address	Đọc toàn bộ địa chỉ
+	Skip	Bỏ qua

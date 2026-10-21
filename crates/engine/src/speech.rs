@@ -20,6 +20,7 @@
 //! The document is read one chunk at a time ([`Chunk`]: a paragraph, a page or all of it): the
 //! queue holds the sentences of the current chunk only, and the next chunk is loaded when the
 //! player gets to the end of it.
+//! The text rules ([`clean`]) take odd characters out of the spoken text.
 
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 
@@ -27,9 +28,10 @@ use serde_json::{Value, json};
 use wordcraft_doc::para::{COLUMN_BREAK, LINE_BREAK, OBJ, PAGE_BREAK};
 use wordcraft_doc::{Document, InlineObject, Path, Pos, StoryRef};
 
+pub mod clean;
 pub mod settings;
 
-pub use settings::{Chunk, SpeechSettings};
+pub use settings::{Chunk, SpeechSettings, TextRules, UrlMode};
 
 /// Longest sentence handed to the speech program (longer ones are split at a space).
 const MAX_SENTENCE: usize = 600;
@@ -81,9 +83,11 @@ impl Utterance {
 
 /// How the text of a sentence is prepared.
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ReadOptions {
+pub struct ReadOptions<'a> {
     /// Leave citation and bibliography fields out.
     pub skip_citations: bool,
+    /// The text rules; `None` keeps the text as written (only spaces and citation leftovers tidied).
+    pub rules: Option<&'a TextRules>,
 }
 
 /// The citation and bibliography fields of `story` as (start, end) spans, both markers included.
@@ -97,10 +101,10 @@ fn citation_spans(doc: &Document, story: StoryRef, skip: bool) -> Vec<(Pos, Pos)
 /// The sentences from `from` (to `to`, if given) in `from`'s story, in reading order.
 /// With `skip_citations`, citation and bibliography fields are left out.
 pub fn sentences(doc: &Document, from: &Pos, to: Option<&Pos>, skip_citations: bool) -> Vec<Utterance> {
-    sentences_with(doc, from, to, &ReadOptions { skip_citations })
+    sentences_with(doc, from, to, &ReadOptions { skip_citations, ..Default::default() })
 }
 
-/// [`sentences`] with the options of `opts`.
+/// [`sentences`] with the text rules of `opts`.
 pub fn sentences_with(doc: &Document, from: &Pos, to: Option<&Pos>, opts: &ReadOptions) -> Vec<Utterance> {
     let story = from.story;
     let skipped = citation_spans(doc, story, opts.skip_citations);
@@ -172,7 +176,10 @@ fn para_sentences(
             return;
         }
         let piece: String = text.chars().skip(a).take(b - a).collect();
-        let spoken = tidy(&piece);
+        let spoken = match opts.rules {
+            Some(rules) => clean::clean(&piece, rules),
+            None => tidy(&piece),
+        };
         if !spoken.chars().any(char::is_alphanumeric) {
             continue;
         }
@@ -633,7 +640,7 @@ impl Shared {
     fn load(&mut self, c: usize, forward: bool) -> bool {
         let found = {
             let Some(src) = &self.source else { return false };
-            let opts = ReadOptions { skip_citations: src.skip_citations };
+            let opts = ReadOptions { skip_citations: src.skip_citations, rules: Some(&self.settings.text) };
             let mut at = c;
             loop {
                 if at >= src.plan.chunks() {

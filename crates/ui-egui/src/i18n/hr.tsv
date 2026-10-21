@@ -2706,3 +2706,18 @@ preview	Title	Naslov
 	The whole document	Cijeli dokument
 	Read Aloud settings…	Postavke čitanja naglas…
 	Read Aloud prepares and reads this much text, then goes on to the next part.	Čitanje naglas priprema i čita ovoliko teksta, a zatim prelazi na sljedeći dio.
+	Read Aloud: text	Čitanje naglas: tekst
+	Web addresses:	Web-adrese:
+	Read the site name only	Čitaj samo naziv web-mjesta
+	Skip emoji	Preskoči emojije
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	Preskoči znakove označavanja (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Preskoči ponovljene interpunkcijske znakove (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Preskoči simbole (strelice, okvire, grafičke oznake, znakove ikona)
+	Skip text in (parentheses)	Preskoči tekst u (oblim zagradama)
+	Skip text in [square brackets]	Preskoči tekst u [uglatim zagradama]
+	Skip text that matches (regular expressions, one per line):	Preskoči tekst koji odgovara (regularni izrazi, jedan po retku):
+	Characters to skip:	Znakovi za preskakanje:
+	Say instead (one per line, text = spoken as):	Izgovori umjesto toga (jedno po retku, tekst = izgovor):
+	The text on the page doesn't change. Only the spoken text does.	Tekst na stranici se ne mijenja. Mijenja se samo izgovoreni tekst.
+	Read all of the address	Čitaj cijelu adresu
+	Skip	Preskoči

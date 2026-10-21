@@ -2704,3 +2704,18 @@ preview	Title	Пример
 	The whole document	Весь документ
 	Read Aloud settings…	Параметры чтения вслух…
 	Read Aloud prepares and reads this much text, then goes on to the next part.	Чтение вслух готовит и читает столько текста, затем переходит к следующей части.
+	Read Aloud: text	Чтение вслух: текст
+	Web addresses:	Веб-адреса:
+	Read the site name only	Читать только имя сайта
+	Skip emoji	Пропускать эмодзи
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	Пропускать символы разметки (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Пропускать повторяющуюся пунктуацию (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Пропускать значки (стрелки, рамки, маркеры списков, символы значков)
+	Skip text in (parentheses)	Пропускать текст в (круглых скобках)
+	Skip text in [square brackets]	Пропускать текст в [квадратных скобках]
+	Skip text that matches (regular expressions, one per line):	Пропускать совпадающий текст (регулярные выражения, по одному в строке):
+	Characters to skip:	Пропускать символы:
+	Say instead (one per line, text = spoken as):	Произносить иначе (по одному в строке, текст = как произносить):
+	The text on the page doesn't change. Only the spoken text does.	Текст на странице не меняется. Меняется только произносимый текст.
+	Read all of the address	Читать адрес полностью
+	Skip	Пропускать

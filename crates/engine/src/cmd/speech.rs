@@ -36,6 +36,7 @@ pub fn specs() -> Vec<CommandSpec> {
 const SETTINGS_PARAMS: &str = concat!(
     "{",
     r#""chunk"?: "paragraph|page|document" (read one paragraph, one page or all of it at a time)"#,
+    r#", "text"?: {"urls"?: "read|domain|skip", "skipEmoji"?: bool, "skipSymbols"?: bool, "skipMarkup"?: bool, "skipBrackets"?: bool, "skipParentheses"?: bool, "collapseRepeats"?: bool, "skipChars"?: string, "replacements"?: [{"from": string, "to": string}], "skipPatterns"?: [regex]}"#,
     "} — changes the named settings (a bad value changes nothing) and returns them all; a reading in progress carries on from the same sentence.",
 );
 
@@ -323,6 +324,21 @@ mod tests {
     }
 
     #[test]
+    fn text_rules_reach_the_reading() {
+        let mut s = Session::new(Document::from_text("Hi → there. Bye ***** now."));
+        s.run("review.readAloud", &json!({})).unwrap();
+        assert_eq!(s.run("readAloud.status", &json!({})).unwrap()["current"]["text"], "Hi there.");
+        assert_eq!(s.run("readAloud.next", &json!({})).unwrap()["current"]["text"], "Bye now.");
+        // The highlight is on the words as written.
+        let u = s.read_aloud.current().unwrap();
+        assert_eq!(s.doc.para_at(&u.start).unwrap().text.get(u.start.off..u.end.off), Some("Bye ***** now."));
+        // A change carries on from the same sentence.
+        let r = s.run("readAloud.settings", &json!({"text": {"collapseRepeats": false, "skipSymbols": false}})).unwrap();
+        assert_eq!(r["text"]["collapseRepeats"], false);
+        assert_eq!(s.read_aloud.current().map(|u| u.text).as_deref(), Some("Bye ***** now."));
+    }
+
+    #[test]
     fn settings_change_and_keep_the_place() {
         let mut s = Session::new(Document::from_text("One. Two. Three."));
         let r = s.run("readAloud.settings", &json!({})).unwrap();
@@ -338,6 +354,8 @@ mod tests {
         assert!(s.run("readAloud.settings", &json!({"chunk": "page", "other": 1, "x": {}})).is_ok());
         assert!(s.run("readAloud.settings", &json!({"chunk": "chapter"})).is_err());
         assert_eq!(s.read_aloud.settings().chunk, crate::speech::Chunk::Page);
+        let r = s.run("readAloud.settings", &json!({"text": {"skipEmoji": true}})).unwrap();
+        assert_eq!(r["text"]["skipEmoji"], true);
     }
 
     #[test]

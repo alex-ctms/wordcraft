@@ -2721,3 +2721,18 @@ preview	Title	Titel
 	The whole document	Hela dokumentet
 	Read Aloud settings…	Inställningar för uppläsning…
 	Read Aloud prepares and reads this much text, then goes on to the next part.	Uppläsning förbereder och läser så här mycket text och går sedan vidare till nästa del.
+	Read Aloud: text	Uppläsning: text
+	Web addresses:	Webbadresser:
+	Read the site name only	Läs bara webbplatsens namn
+	Skip emoji	Hoppa över emoji
+	Skip markup characters (* # _ ~ | ^ ` < > = \\)	Hoppa över märkningstecken (* # _ ~ | ^ ` < > = \\)
+	Skip repeated punctuation (*****, -----)	Hoppa över upprepade skiljetecken (*****, -----)
+	Skip symbols (arrows, boxes, bullets, icon characters)	Hoppa över symboler (pilar, rutor, punkter, ikontecken)
+	Skip text in (parentheses)	Hoppa över text inom (parenteser)
+	Skip text in [square brackets]	Hoppa över text inom [hakparenteser]
+	Skip text that matches (regular expressions, one per line):	Hoppa över text som matchar (reguljära uttryck, ett per rad):
+	Characters to skip:	Tecken att hoppa över:
+	Say instead (one per line, text = spoken as):	Säg i stället (en per rad, text = uttal):
+	The text on the page doesn't change. Only the spoken text does.	Texten på sidan ändras inte. Bara den upplästa texten ändras.
+	Read all of the address	Läs hela adressen
+	Skip	Hoppa över
