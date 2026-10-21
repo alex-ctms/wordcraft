@@ -58,6 +58,8 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
     let t = Tokens::get(ctx);
     let state = app.session.read_aloud.state();
     let (index, count) = app.session.read_aloud.progress();
+    // Next and Previous go on into the next paragraph or page, and back into the one before.
+    let (chunk, chunks) = app.session.read_aloud.chunk_progress();
     let mut run: Option<(&str, serde_json::Value)> = None;
     let right_top = app.canvas.canvas_rect.map_or(ctx.content_rect().right_top() + vec2(-24.0, 160.0), |r| r.right_top() + vec2(-24.0, 16.0));
     let window = egui::Window::new(tl!("Read Aloud"))
@@ -70,14 +72,14 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         ui.set_width(236.0);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 6.0;
-            if button(ui, &t, "mediaPrev", tl!("Previous sentence"), count > 0 && index > 0) {
+            if button(ui, &t, "mediaPrev", tl!("Previous sentence"), count > 0 && (index > 0 || chunk > 0)) {
                 run = Some(("readAloud.previous", json!({})));
             }
             let (icon, tip) = if state == State::Playing { ("mediaPause", tl!("Pause")) } else { ("mediaPlay", tl!("Play")) };
             if button(ui, &t, icon, tip, true) {
                 run = Some(("readAloud.playPause", json!({})));
             }
-            if button(ui, &t, "mediaNext", tl!("Next sentence"), index + 1 < count) {
+            if button(ui, &t, "mediaNext", tl!("Next sentence"), count > 0 && (index + 1 < count || chunk + 1 < chunks)) {
                 run = Some(("readAloud.next", json!({})));
             }
             if button(ui, &t, "mediaStop", tl!("Stop"), true) {
@@ -93,7 +95,6 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
             ui.label(egui::RichText::new(what).color(t.text_dim).small());
         });
         // Where in the document: "Paragraph 3 / 40".
-        let (chunk, chunks) = app.session.read_aloud.chunk_progress();
         let unit = match app.session.read_aloud.settings().chunk {
             Chunk::Paragraph => Some(tl!("Paragraph")),
             Chunk::Page => Some(tl!("Page")),

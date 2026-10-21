@@ -835,6 +835,10 @@ impl ReadAloud {
         let s = lock(&self.shared.0);
         (s.index, s.queue.len())
     }
+    /// Where the reading in progress ends (a selection's end), if not at the end of its story.
+    pub fn reading_end(&self) -> Option<Pos> {
+        lock(&self.shared.0).source.as_ref().and_then(|src| src.plan.to.clone())
+    }
     /// (current chunk, number of chunks).
     pub fn chunk_progress(&self) -> (usize, usize) {
         let s = lock(&self.shared.0);

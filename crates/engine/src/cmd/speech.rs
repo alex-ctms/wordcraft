@@ -74,11 +74,13 @@ fn begin(s: &mut Session, from: &Pos, to: Option<&Pos>) -> bool {
     s.read_aloud.start_plan(Arc::new(s.doc.clone()), plan)
 }
 
-/// A reading in progress starts again at its current sentence (with new settings), paused if it was.
+/// A reading in progress starts again at its current sentence (with new settings), paused if it
+/// was, and still ends where it ended (a selection's end).
 fn restart(s: &mut Session) {
     if let Some(cur) = s.read_aloud.current() {
         let paused = s.read_aloud.state() == State::Paused;
-        if begin(s, &cur.start, None) && paused {
+        let to = s.read_aloud.reading_end();
+        if begin(s, &cur.start, to.as_ref()) && paused {
             s.read_aloud.play_pause();
         }
     }
@@ -267,6 +269,19 @@ mod tests {
         let r = s.run("review.readAloud", &json!({})).unwrap();
         assert_eq!(r["count"], 1);
         assert_eq!(r["current"]["text"], "Two.");
+    }
+
+    #[test]
+    fn a_change_while_reading_a_selection_keeps_its_end() {
+        let mut s = Session::new(Document::from_text("One. Two. Three.\nFour."));
+        s.sel = crate::Selection { anchor: Pos::body(0, 5), focus: Pos::body(0, 9) };
+        s.run("review.readAloud", &json!({})).unwrap();
+        let r = s.run("readAloud.skipCitations", &json!({"value": false})).unwrap();
+        assert_eq!((r["current"]["text"].as_str(), r["count"].as_u64(), r["chunkCount"].as_u64()), (Some("Two."), Some(1), Some(1)));
+        let r = s.run("readAloud.settings", &json!({"chunk": "document"})).unwrap();
+        assert_eq!(r["chunk"], "document");
+        let st = s.run("readAloud.status", &json!({})).unwrap();
+        assert_eq!((st["current"]["text"].as_str(), st["count"].as_u64()), (Some("Two."), Some(1)));
     }
 
     #[test]
